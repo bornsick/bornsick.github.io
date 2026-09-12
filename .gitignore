@@ -1,0 +1,11 @@
+# This folder is the website (https://USERNAME.github.io/).
+# Deny everything, then allow only what should be public.
+/*
+!/.gitignore
+!/.nojekyll
+!/index.html
+!/cutting-block/
+
+# never publish
+/cutting-block/.backup/
+*.fig

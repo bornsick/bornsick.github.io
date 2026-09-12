@@ -1,0 +1,606 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Cutting Block</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#202024">
+<meta name="color-scheme" content="dark">
+<meta name="description" content="Programme brain for the twelve-week cutting block.">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Cutting Block">
+<meta name="format-detection" content="telephone=no">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<style>
+/* v1 shell additions, restyled to the Ignite Gym reference. */
+.btn{all:unset;flex:0 0 auto;padding:10px 18px;border:1px solid var(--green);border-radius:6px;
+ background:transparent;color:var(--green);font:700 14px/1 var(--font);cursor:pointer;text-align:center}
+.btn:focus-visible{outline:1px solid var(--green);outline-offset:2px}
+.btn:active{background:var(--green-dk);border-color:var(--green-dk);color:#fff}
+.toast{position:fixed;left:50%;bottom:calc(86px + var(--safeB));z-index:60;background:var(--g500);
+ color:var(--g100);padding:12px 18px;border-radius:6px;font-size:14px;
+ opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;text-align:center;
+ max-width:calc(100vw - 64px);transform:translateX(-50%) translateY(8px)}
+.toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+.swapnote{background:var(--g600);box-shadow:inset 3px 0 0 var(--green);border-radius:8px;padding:14px 16px;
+ font-size:14px;color:var(--g200);line-height:1.5;margin:0 0 12px}
+.swapnote b{color:var(--green);font-weight:700}
+/* The 20% — the two or three points that decide what the lift trains. */
+.p20{border:1px solid var(--green);background:var(--g600);border-radius:8px;padding:14px 16px 16px;margin:0 0 12px}
+.p20 .lb{display:block;font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
+ color:var(--green);margin-bottom:10px}
+.p20 ol{margin:0;padding:0;list-style:none;counter-reset:p20}
+.p20 li{counter-increment:p20;position:relative;padding-left:24px;font-size:15px;
+ line-height:1.45;color:var(--g100);margin-bottom:10px}
+.p20 li:last-child{margin-bottom:0}
+.p20 li:before{content:counter(p20);position:absolute;left:0;top:0;
+ font:700 15px/1.45 var(--font);color:var(--green)}
+</style>
+<script src="resolver.js"></script>
+<script src="pareto.js"></script>
+</head>
+<body>
+<style>@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap');
+:root{
+ /* Ignite Gym palette — sampled pixel-for-pixel from the reference mockups. */
+ --g700:#121214;--g600:#202024;--g500:#29292E;--g400:#323238;--g300:#7C7C8A;--g200:#C4C4CC;--g100:#E1E1E6;
+ --green:#00B37E;--green-dk:#00875F;--red-ig:#F75A68;
+ /* Legacy token names, remapped so screens not yet rebuilt inherit the palette. */
+ --void:var(--g700);--ground:var(--g600);--card:var(--g600);--raise:var(--g500);
+ --ink:var(--g100);--dim:var(--g200);--faint:var(--g300);--rule:var(--g500);
+ --brass:var(--green);--brass-dim:var(--green-dk);--brass-wash:#0F2A22;
+ --red:var(--red-ig);--red-wash:#2A1719;
+ --font:Roboto,-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;
+ --pad:32px; --safeT:env(safe-area-inset-top,0px); --safeB:env(safe-area-inset-bottom,0px);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%;background:var(--g700)}
+body{margin:0;background:var(--g700);color:var(--g100);
+ font:400 16px/1.5 var(--font);font-variant-numeric:tabular-nums;
+ padding-bottom:calc(62px + var(--safeB) + 24px);overflow-x:hidden}
+
+/* header — Ignite HomeHeader: avatar, two-line greeting */
+.mast{position:sticky;top:0;z-index:30;background:var(--g600);
+ padding:calc(var(--safeT) + 16px) var(--pad) 20px;display:flex;align-items:center;gap:16px}
+.ava{flex:0 0 64px;width:64px;height:64px;border-radius:50%;border:2px solid var(--g400);background:var(--g700);
+ display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1}
+.ava b{font-size:24px;font-weight:700;color:var(--green)}
+.ava i{font-style:normal;font-size:9px;font-weight:700;letter-spacing:.1em;color:var(--g300);margin-top:3px}
+.hi{flex:1;min-width:0}
+.hi .l1{display:block;font-size:18px;line-height:1.6;color:var(--g100)}
+.hi .l2{display:block;font-size:20px;font-weight:700;line-height:1.5;color:var(--g100);
+ white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+main{max-width:720px;margin:0 auto;padding:24px var(--pad) 26px}
+section{display:none}section.on{display:block;animation:fade .26s ease}
+@keyframes fade{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+
+.bill{border-top:3px solid var(--brass);border-bottom:1px solid var(--rule);padding:15px 0 17px;margin-bottom:18px}
+.bill .over{font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--brass);margin-bottom:6px}
+.bill .title{font-family:var(--font);font-weight:700;font-size:clamp(36px,13vw,56px);line-height:.88;
+ text-transform:uppercase;margin:0;overflow-wrap:break-word}
+.bill .sub{font-size:14px;color:var(--dim);margin-top:9px;line-height:1.45}
+.tags{display:flex;gap:5px;flex-wrap:wrap;margin-top:12px}
+.tag{font-size:10px;letter-spacing:.12em;text-transform:uppercase;padding:5px 9px;border:1px solid var(--rule);color:var(--dim);border-radius:2px}
+.tag.b{border-color:var(--brass-dim);color:var(--brass);background:var(--brass-wash)}
+
+.rule{display:flex;align-items:center;gap:11px;margin:24px 0 10px}
+.rule span{font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--brass);white-space:nowrap}
+.rule:after{content:"";flex:1;height:1px;background:var(--rule)}
+
+/* section label — Ignite "Exercícios   4" */
+.sect{display:flex;justify-content:space-between;align-items:center;margin:0 0 14px}
+.sect h3{margin:0;font:700 16px/1.4 var(--font);color:var(--g200)}
+.sect span{font-size:14px;line-height:1.4;color:var(--g200)}
+
+/* exercise card — Ignite ExerciseCard: thumb, title, subtitle, chevron */
+.xlist{display:flex;flex-direction:column;gap:12px}
+.xc{all:unset;box-sizing:border-box;display:flex;align-items:center;width:100%;min-height:83px;
+ background:var(--g500);border-radius:6px;padding:8px 16px 8px 8px;cursor:pointer;transition:background .15s}
+.xc:active{background:var(--g400)}
+.xc:focus-visible{outline:1px solid var(--green);outline-offset:2px}
+.xth{flex:0 0 67px;height:67px;border-radius:5px;background:var(--g600);margin-right:16px;
+ display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1}
+.xth b{font-size:26px;font-weight:700;color:var(--green)}
+.xth i{font-style:normal;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--g300);margin-top:4px}
+.xtx{flex:1;min-width:0}
+.xtx .t{display:block;font:700 18px/1.3 var(--font);color:#FFFFFF;overflow-wrap:break-word}
+.xtx .d{display:block;font-size:14px;line-height:1.4;color:var(--g200);margin-top:6px}
+.xtx .d em{font-style:normal;color:var(--green)}
+.chev{flex:0 0 28px;margin-left:8px;color:var(--g300);display:flex}
+.chev svg{width:28px;height:28px;fill:none;stroke:currentColor;stroke-width:1.15;stroke-linecap:round;stroke-linejoin:round}
+
+/* exercise detail — full screen, slides in from the card's chevron */
+.exd{position:fixed;inset:0;z-index:50;background:var(--g700);overflow-y:auto;-webkit-overflow-scrolling:touch;
+ transform:translateX(100%);visibility:hidden;transition:transform .25s ease,visibility 0s linear .25s}
+.exd.on{transform:none;visibility:visible;transition:transform .25s ease}
+.exd-h{position:sticky;top:0;z-index:2;background:var(--g600);padding:calc(var(--safeT) + 12px) var(--pad) 20px}
+.back{all:unset;cursor:pointer;display:inline-flex;color:var(--green);margin:0 0 10px -6px;padding:6px}
+.back:focus-visible{outline:1px solid var(--green);border-radius:6px}
+.back svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.exd-h h2{margin:0;font:700 20px/1.3 var(--font);color:var(--g100)}
+.exd-h .grp{display:block;margin-top:4px;font-size:14px;color:var(--g200)}
+.exd-b{padding:24px var(--pad) calc(var(--safeB) + 32px)}
+.stats{display:flex;background:var(--g600);border-radius:8px;padding:16px 8px;margin:0 0 12px}
+.stats div{flex:1;text-align:center;min-width:0}
+.stats div+div{border-left:1px solid var(--g500)}
+.stats b{display:block;font-size:22px;font-weight:700;line-height:1.25;color:var(--g100)}
+.stats span{font-size:13px;color:var(--g200)}
+.f{background:var(--g600);border-radius:8px;padding:14px 16px;margin:0 0 12px}
+.f .lb{display:block;font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--g300);margin-bottom:6px}
+.f p{margin:0;font-size:15px;line-height:1.55;color:var(--g100)}
+.f.cue{box-shadow:inset 3px 0 0 var(--green)}.f.cue .lb{color:var(--green)}
+.f.no{box-shadow:inset 3px 0 0 var(--red-ig)}.f.no .lb{color:var(--red-ig)}
+.f.why{margin-bottom:0}.f.why p{color:var(--g200);font-size:14px}
+
+/* goals — checklist. No Ignite mockup exists for this; built from its card, label and accent. */
+.gsum{background:var(--g600);border-radius:8px;padding:16px;margin:16px 0 32px}
+.gsum .row{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
+.gsum b{font-size:28px;font-weight:700;line-height:1.2;color:var(--g100)}
+.gsum b small{font-size:16px;font-weight:400;color:var(--g300)}
+.gsum span{font-size:14px;color:var(--g200)}
+.bar{height:6px;border-radius:3px;background:var(--g500);margin-top:12px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--green);border-radius:3px;transition:width .25s}
+.gsect{margin:0 0 32px}
+.gnote{font-size:13px;line-height:1.45;color:var(--g300);margin:-6px 0 12px}
+.glist{display:flex;flex-direction:column;gap:8px}
+.gi{all:unset;box-sizing:border-box;display:flex;align-items:center;gap:14px;width:100%;min-height:60px;
+ background:var(--g500);border-radius:6px;padding:10px 16px 10px 14px;cursor:pointer}
+.gi:focus-visible{outline:1px solid var(--green);outline-offset:2px}
+.gbox{flex:0 0 24px;height:24px;border-radius:5px;border:2px solid var(--g300);box-sizing:border-box;
+ display:flex;align-items:center;justify-content:center;transition:background .15s,border-color .15s}
+.gbox svg{width:14px;height:14px;fill:none;stroke:#fff;stroke-width:3.2;stroke-linecap:round;stroke-linejoin:round;opacity:0}
+.gi[aria-checked="true"] .gbox{background:var(--green);border-color:var(--green)}
+.gi[aria-checked="true"] .gbox svg{opacity:1}
+.gtx{flex:1;min-width:0}
+.gtx .t{display:block;font:700 16px/1.3 var(--font);color:#FFFFFF}
+.gtx .d{display:block;font-size:14px;line-height:1.4;color:var(--g200);margin-top:2px}
+.gi[aria-checked="true"] .gtx .d{color:var(--green)}
+.nw{white-space:nowrap}
+
+/* install prompt — only in a Safari tab on iPhone/iPad, never inside the installed app */
+.inst{display:flex;gap:12px;align-items:flex-start;background:var(--g600);border:1px solid var(--green);
+ border-radius:8px;padding:14px 12px 14px 16px;margin:0 0 24px}
+.inst .tx{flex:1;min-width:0;font-size:14px;line-height:1.5;color:var(--g200)}
+.inst .tx b{display:block;font-size:16px;color:var(--g100);margin-bottom:2px}
+.inst .tx svg{width:16px;height:16px;vertical-align:-3px;fill:none;stroke:var(--green);stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.inst .x{all:unset;cursor:pointer;color:var(--g300);padding:2px;display:flex}
+.inst .x svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round}
+.inst .x:focus-visible{outline:1px solid var(--green);border-radius:4px}
+
+/* day chips — Ignite Group chips */
+.days{display:flex;gap:8px;margin:16px 0 43px}
+.dtab{all:unset;box-sizing:border-box;flex:1;min-width:0;height:43px;display:flex;align-items:center;justify-content:center;
+ background:var(--g600);border:1px solid transparent;border-radius:6px;cursor:pointer;
+ font:400 12px/1 var(--font);text-transform:uppercase;color:var(--g200);transition:color .15s,border-color .15s}
+.dtab.on{border-color:var(--green);color:var(--green)}
+.dtab:focus-visible{outline:1px solid var(--green);outline-offset:2px}
+
+.plates{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:1px;background:var(--rule);border:1px solid var(--rule);margin-bottom:13px}
+.plate{background:var(--card);padding:13px 14px}
+.plate .k{font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--faint)}
+.plate .v{font-family:var(--font);font-weight:700;font-size:30px;line-height:1.05;margin-top:5px}
+.plate .s{font-size:11.5px;color:var(--dim);margin-top:3px;line-height:1.35}
+.plate.hot .v{color:var(--brass)}
+
+.scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--rule)}
+table{width:100%;border-collapse:collapse;font-size:13.5px}
+th,td{padding:9px 10px;border-bottom:1px solid var(--rule);text-align:left}
+tbody tr:last-child td{border-bottom:0}
+th{font-size:9.5px;letter-spacing:.15em;text-transform:uppercase;color:var(--faint);background:var(--ground);white-space:nowrap}
+td.c,th.c{text-align:center;width:34px}
+td b{font-family:var(--font);font-weight:700;font-size:15px}
+tr.now td{background:var(--brass-wash)}tr.now td b{color:var(--brass)}
+tr.dl td{background:var(--raise)}
+
+.wk{border-left:2px solid var(--rule);padding:1px 0 1px 14px;margin-bottom:17px}
+.wk.now{border-left-color:var(--brass)}
+.wk h4{font-family:var(--font);font-weight:700;font-size:14.5px;text-transform:uppercase;letter-spacing:.05em;margin:0}
+.wk .tg{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--brass);margin:5px 0 5px}
+.wk p{margin:0;font-size:14px;color:var(--dim);line-height:1.5}
+
+.lede{color:var(--dim);font-size:14.5px;margin:0 0 17px;line-height:1.6}
+.body{border:1px solid var(--rule);padding:14px 15px;margin-bottom:10px}
+.body p{margin:0 0 9px;font-size:14.5px;line-height:1.5}
+.body p:last-child{margin-bottom:0}
+.body strong{font-weight:600}
+.said{border-left:2px solid var(--brass);background:var(--brass-wash);padding:12px 13px;font-size:13.5px;color:var(--dim);line-height:1.55;margin-top:11px}
+.said b{color:var(--brass);font-weight:600}
+.said.no{border-left-color:var(--red);background:var(--red-wash)}
+.said.no b{color:var(--red)}
+
+.fld{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--rule)}
+.fld:last-child{border-bottom:0}
+.fld label{font-size:14px;flex:1;min-width:0}
+.fld label small{display:block;color:var(--faint);font-size:11.5px;margin-top:2px;line-height:1.4}
+input{flex:0 0 88px;width:88px;padding:9px 10px;border:1px solid var(--brass-dim);border-radius:2px;background:var(--void);
+ color:var(--brass);font:700 18px var(--font);letter-spacing:.03em;text-align:right}
+input:focus-visible{outline:1px solid var(--brass);outline-offset:1px;border-color:var(--brass)}
+input::placeholder{color:var(--faint);font:400 14px var(--font)}
+
+/* tab bar — Ignite: flat grey-600, icon only, green when active */
+nav{position:fixed;left:0;right:0;bottom:0;z-index:40;background:var(--g600);
+ display:grid;grid-template-columns:repeat(6,1fr);padding:0 8px var(--safeB)}
+nav button{all:unset;display:flex;justify-content:center;padding:23px 0 5px;cursor:pointer;color:var(--g200);transition:color .15s}
+nav button svg{display:block;width:34px;height:34px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+nav button.on{color:var(--green)}
+nav button:focus-visible{outline:1px solid var(--green);outline-offset:-4px;border-radius:8px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+<header class="mast"><div class="ava" id="ava"></div><div class="hi"><span class="l1" id="hi1"></span><span class="l2" id="hi2"></span></div></header>
+<main>
+ <section id="today" class="on"></section>
+ <section id="train"><div class="days" id="dtabs"></div><div id="trainbody"></div></section>
+ <section id="prog"><div id="progbody"></div></section>
+ <section id="extra"><div id="extrabody"></div></section>
+ <section id="nums"><div id="numbody"></div></section>
+ <section id="goals"><div id="goalsbody"></div></section>
+</main>
+<nav>
+ <button type="button" data-s="today" class="on" aria-label="Today"><svg viewBox="0 0 24 24"><path d="M3.5 10.2 12 3.5l8.5 6.7V19a1.5 1.5 0 0 1-1.5 1.5h-4.2v-5.8H9.2v5.8H5A1.5 1.5 0 0 1 3.5 19z"/></svg></button>
+ <button type="button" data-s="train" aria-label="Train"><svg viewBox="0 0 24 24"><path d="M6.5 7v10M17.5 7v10M3.5 9.5v5M20.5 9.5v5M6.5 12h11"/></svg></button>
+ <button type="button" data-s="prog" aria-label="Weeks"><svg viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15.5" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg></button>
+ <button type="button" data-s="extra" aria-label="Extra"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 8v8M8 12h8"/></svg></button>
+ <button type="button" data-s="nums" aria-label="Numbers"><svg viewBox="0 0 24 24"><path d="M4 20.5h16M7 16.5v-5M12 16.5V6M17 16.5v-8"/></svg></button>
+ <button type="button" data-s="goals" aria-label="Goals"><svg viewBox="0 0 24 24"><path d="M7.5 4h9v5a4.5 4.5 0 0 1-9 0zM7.5 6H4.5v1.2a3.3 3.3 0 0 0 3.3 3.3M16.5 6h3v1.2a3.3 3.3 0 0 1-3.3 3.3M12 13.5V17M8.5 20.5h7M9.5 17h5"/></svg></button>
+</nav>
+<div class="exd" id="exd" role="dialog" aria-modal="true" aria-labelledby="exdTitle"><div class="exd-h" id="exdH"></div><div class="exd-b" id="exdB"></div></div>
+<script>
+const D={"DAYS": [["mon", "Segunda", "Upper", "Força", [["Incline Bench Press (Barbell)", 3, 0, "6-8", "8-10", "Bench at 30–45°, never steeper. Shoulder blades pulled back and down and held there for the entire set. Feet flat and pushing into the floor. Grip about 1.5× shoulder width so your forearms end up vertical at the bottom.", "Lower to the upper chest, just below the collarbone. Elbows 45–70° from the torso. One second pause at the bottom with tension still on the pecs, then drive up and slightly back.", "\"Blades in your back pocket.\" Bring the chest to the bar, not the bar to the chest.", "Flaring the elbows to 90°. Bench angle creeping upright as you tire — past 45° this becomes a shoulder press. Losing the blade position at the bottom and letting the shoulders roll forward.", "Biomechanical modelling found 90° elbow flare markedly increases shoulder joint loading, and most pressing shoulder injuries happen there. 45–70° keeps the pecs loaded while sparing the joint."], ["Cable Fly Crossovers", 2, 0, "8-10", "10-12", "Three cable heights across your sets — low, medium, high. Split stance for stability, torso leaning slightly into the movement. Set a soft elbow bend and lock it.", "Bring the hands together and slightly across the midline. Squeeze, then control the stretch on the way back rather than letting the cables pull you open.", "\"Hug a barrel.\" The elbow angle never changes from rep one to the last.", "Loading it heavy enough that the arms start bending — that turns a flye into a press and the pecs get less, not more. Shoulders rolling forward in the stretch.", "Varying cable height shifts emphasis across the sternal and clavicular pec fibres, which is why the program prescribes three positions rather than three identical sets."], ["Lat Pulldown (Cable)", 3, 0, "8-10", "10-12", "Overhand grip about 1.5× shoulder width. Thighs locked under the pads. Sit tall, arms fully extended overhead, then depress the shoulder blades — pull them down away from your ears before the elbows bend at all.", "Pull the bar to the upper chest, driving the elbows down and back. Slow 2–3 second negative and feel the lats lengthen on the way up.", "\"Shoulders down first, then pull.\" \"Elbows into your back pockets.\"", "Leaning back and heaving. Letting the shoulders shrug up at the top of each rep, which hands the work straight to the traps.", "Your substitution for the wide-grip pull-up, and the program's own listed option. Worth knowing: EMG found no meaningful lat activation difference between wide, narrow and neutral grips — scapular depression is what matters, not grip."], ["Lateral Raise (Cable)", 2, 1, "8-10", "10-12", "Cable at or slightly below shoulder height, standing side-on. Slight forward lean into the handle. Neutral wrist, soft elbow.", "Move the weight by squeezing the side delt. Lead with the elbow and let the hand follow. Small, deliberate, controlled to roughly shoulder height.", "\"Elbow leads, hand follows.\" Shoulders stay down and away from the ears.", "By a wide margin the most ego-lifted movement you do. If your shoulders rise toward your ears, halve the weight. Also skip the exaggerated thumbs-down pour.", "A slight forward lean and a scapular-plane path maximise middle-delt involvement while sparing the cuff. Aggressive internal rotation drives the humeral head into the acromion — a recognised impingement risk — and EMG found neutral rotation produced more middle-delt activity anyway."], ["Smith Machine Row", 2, 0, "6-8", "8-10", "Hinge at the hips with the bar close to your legs, torso close to parallel with the floor. Braced core, neutral spine, blades free to move.", "Big stretch at the bottom, then pull until the bar touches your stomach or lower chest. Elbows at roughly 45°. Squeeze the blades, control it back down.", "\"Torso stays still, the bar comes to you.\"", "Standing progressively more upright as the set goes on. If your torso is rising rep to rep, that set is finished — continuing just loads your lower back.", "The fixed bar path removes the balance demand, so your only job is holding torso position. That's a feature: it lets the load land on the upper back instead of on staying upright."], ["Overhead Triceps Extension", 2, 1, "8-10", "10-12", "Face away from the cable, bar behind the head, upper arms roughly beside your ears and staying there. Core braced so the ribs don't flare.", "Optional half-second pause in the stretched position. Extend without letting the elbows drift outward, then control back into the stretch.", "\"Upper arms are frozen.\" Elbows point forward, not out.", "Elbows flaring wide, which shifts the work off the long head — the exact head this exercise exists to train.", "One of the best-supported choices in your program. Maeo's trial found long-head growth of 28.5% overhead versus 19.6% with pushdowns, because the long head crosses the shoulder and only fully lengthens with the arm overhead."], ["Bayesian Cable Curl", 2, 1, "8-10", "10-12", "Cable at the lowest setting. Stand a step or two in front of it so the arm starts behind your body — that behind-the-torso position is the entire point of the variation. Elbow pinned at your side.", "Curl without letting the upper arm drift forward. Squeeze at the top, then control the negative all the way back into the stretch.", "\"Elbow stays behind you.\"", "Standing too close, which kills the stretch and makes it an ordinary curl. If you have a left-right size difference, do it one arm at a time starting with the weaker side.", "The biceps long head crosses the shoulder, so it only fully lengthens when the elbow sits behind the torso. Training it at that length is what separates this from a standard curl."]]], ["tue", "Terça", "Lower", "Força", [["Mesa Flexora", 2, 0, "8-10", "10-12", "Set the machine so you get the biggest possible stretch at the bottom. Pad just above the heels. Hips pressed flat into the bench.", "Curl all the way, brief squeeze, then control the return into the stretch rather than letting it drop.", "\"Hips stay down.\"", "Letting the hips pop up off the pad to finish the rep — that's the hamstrings tapping out and the lower back taking over.", "The lying position keeps the hip extended, so the hamstrings start relatively shortened. It complements the seated version rather than replacing it — they bias different portions."], ["Agachamento no Smith", 3, 0, "6-8", "8-10", "Get under the bar, set your feet as you would for a normal squat, then walk them forward 3–6 inches. You'll lean back into the bar slightly, which allows a more upright torso and more quad tension. Brace hard before you unrack.", "Controlled descent to roughly parallel, then drive up through the mid-foot.", "\"Sit down between your feet.\" Chest stays proud.", "Feet too far forward turns it into a hack squat and puts the knee somewhere awkward. Depth creeping shorter as fatigue sets in. If your heels lift at the bottom, move the feet further forward.", "Quad hypertrophy peaks around 90–100° of knee flexion — roughly parallel. Going deeper shifts more work to glutes and adductors, so for quads parallel is entirely sufficient."], ["Levantamento Terra Romeno", 3, 0, "6-8", "8-10", "Bar close to the legs, soft knees with a fixed bend, neutral spine, shoulder blades set. Weight through the mid-foot.", "Push the hips backward — not down — with the bar dragging your legs the whole way. Lower for 2–3 seconds until hamstring tension limits the descent. At the top, stop about 75% of the way to full lockout to keep tension on the hamstrings.", "\"Hips back, not down.\" \"Shut a car door with your backside.\"", "Turning it into a squat by bending the knees too much. Letting the bar drift away from the legs. Rounding the lower back at the bottom. Hyperextending at the top.", "Bar drift redirects load from the hamstrings to the lower back — the exact opposite of the intent. The hinge, not the knee bend, is what makes this a hamstring exercise."], ["Cadeira Extensora", 2, 1, "8-10", "10-12", "Seat back as far as is comfortable — this lengthens the rectus femoris. Pad just above the ankles. Grip the handles hard to pull your hips down into the seat.", "Full extension at the top with a brief squeeze. Two to three second negative on every single rep.", "\"Lower it like it's breakable.\"", "Slamming the stack down. The negative is most of the point of this exercise, and it's the first thing that disappears when the weight is too heavy.", "The rectus femoris crosses the hip, so a reclined seat trains it at a longer length. It's also the only quad movement here that isolates the knee extensors with no hip involvement."], ["Panturrilha em Pé", 2, 1, "6-8", "8-10", "Balls of the feet on the platform, knees straight but not locked, torso upright and still.", "One to two second pause at the bottom. Rather than just rising onto the toes, think about rolling the ankle back and forth over the balls of the feet through the full range.", "\"Pause at the bottom, squeeze at the top.\"", "Fast bouncy reps that use Achilles tendon elasticity instead of the calf muscle.", "Unusually strong evidence here. A 12-week within-subject trial found standing raises produced far greater gastrocnemius growth than seated — 12.4% vs 1.7% lateral head, 9.2% vs 0.6% medial — because a straight knee lengthens the gastroc. The bottom pause removes the tendon bounce."], ["Abdominal na Corda", 2, 1, "8-10", "10-12", "Kneeling, rope beside or behind the head, hips fixed in place and staying there for the whole set.", "Round the lower back as you crunch, bringing the ribs toward the pelvis. Control the return without losing tension.", "\"Ribs to hips.\" The hips are an anchor, not a hinge.", "Hinging at the hips instead of flexing the spine — that makes it a hip flexor exercise with essentially no ab involvement.", "The rectus abdominis flexes the spine. If your spine isn't flexing, it isn't the muscle doing the work regardless of how heavy the stack is. Load it and progress it like any other muscle."]]], ["wed", "Quarta", "Pull", "Hipertrofia", [["Neutral-Grip Lat Pulldown", 2, 0, "8-10", "10-12", "Thighs locked under the pads. Handle positioned further out in front of you than a standard pulldown — more like a cross between a pulldown and a pullover. Blades depressed before you pull.", "Pull with the lats through a long arc toward the upper chest. Chase the feeling in the lats rather than the number on the stack.", "\"Elbows to hips.\" Think of the arms as hooks, not movers.", "Leaning far back and heaving. If your torso is swinging, the weight is too heavy.", "Pulling from further in front increases shoulder extension range and loads the lat closer to its lengthened position. Since grip barely changes lat activation, the arc the elbow travels is the variable that actually matters."], ["Pullover na Máquina", 2, 0, "10-12", "10-12", "Seat height so the pads sit against your upper arms with the shoulders comfortably flexed overhead. Chest against the support, ribs down.", "Drive the elbows down and forward in an arc, keeping the elbow angle completely fixed. Squeeze the lats at the bottom, control back into the overhead stretch.", "\"Elbows travel, forearms are just along for the ride.\"", "Bending the elbows, which hands the movement to the triceps and turns it into a pressdown.", "The single best addition to your program. Every other back exercise you do is limited by biceps or grip failing first — here the elbow is fixed, so the lat is the only thing that can fail. It also trains it through shoulder extension in a lengthened position."], ["Remada Iso-Lateral", 3, 1, "8-10", "10-12", "Chest firmly against the pad, seat height so the handles line up with your mid-torso. Blades free to move.", "Elbows out at about 45°. Squeeze the shoulder blades together hard at the end of each rep, then let them travel forward into a stretch on the return.", "\"Pull with your back, park your arms.\" Let the blades move.", "Peeling your chest off the pad to move more weight — the machine exists precisely to stop you doing that. Also locking the blades and rowing with arms only.", "Chest support removes the lower back and hip drive, so load selection becomes an honest test of your upper back. Allowing scapular protraction on the return adds range at the stretched end."], ["Crucifixo Inverso (Máquina)", 2, 1, "12-15", "12-15", "Chest against the pad, seat height so the handles sit at shoulder level. Soft fixed elbow bend, shoulders down.", "Sweep the arms back and out, leading with the elbows. Pause one to two seconds in the squeeze. Controlled return.", "\"Lead with the elbow, drag the hand.\"", "Any weight you can swing is too much weight. Traps and rhomboids will happily take over if you let them.", "Your rear delts sat at one set a week before this — the lowest number in your whole program. Rear delts contribute width from behind and roundness from the front, and they're small enough that light weight and patience is the only approach that works."], ["1-Arm Cable Rear Delt Flye", 2, 1, "10-12", "12-15", "Cable at roughly head height, body angled about 45° to the line of pull. Fixed soft elbow bend.", "Sweep the arm back and across. Pause one to two seconds in the squeeze and contract the rear delt deliberately.", "\"Lead with the elbow.\"", "Traps and momentum taking over. This needs genuinely light weight — lighter than feels reasonable.", "The rear delt is small and easily overpowered by much larger traps and rhomboids. Hand and arm position measurably changes posterior shoulder recruitment, so the path matters more here than the load."], ["Encolhimento (Halteres)", 2, 0, "10-12", "12-15", "Tall posture, dumbbells hanging at your sides, arms straight and staying straight.", "Shrug straight up — think about pulling your shoulders to your ears. Brief pause at the top, then a deliberate pause in the stretch at the bottom.", "\"Ears.\" Straight up, straight down.", "Rolling the shoulders backwards. It adds no muscle action the traps aren't already doing and puts the joint through a loaded circle for nothing. Bending the arms to help.", "The upper trap's line of pull is essentially vertical, so rotation adds nothing mechanically. You picked this off the top-25 list and it replaced the machine version — two shrug variations in one session would have been redundant."], ["Rosca Direta na Polia", 3, 0, "10-12", "12-15", "Cable at the lowest position. Elbows pinned at your sides. Wrists neutral, shoulders back.", "Constant tension throughout — don't rest at the bottom. Slow and controlled in both directions.", "\"Elbows are hinges, not levers.\"", "Swinging the torso. Elbows travelling forward at the top to give the biceps a rest at the point they should be working hardest.", "Cables maintain tension at the bottom where a free bar unloads completely. The angled grip also reduces wrist strain versus a straight bar without changing biceps recruitment meaningfully."], ["Rosca Scott", 2, 1, "12-15", "15-20", "Armpits snug against the top of the pad, seat height set so you aren't reaching upward. Chest against the support.", "Smooth reps. Full extension at the bottom without slamming into it, full contraction at the top.", "\"Controlled at both ends.\"", "Bouncing out of the stretched bottom position. If a biceps tear happens anywhere, it happens there.", "The preacher pad puts the elbow in front of the torso, shortening the long head and biasing the short head — the exact opposite of what your Bayesian curl does, which is why running both makes sense."]]], ["thu", "Quinta", "Push", "Hipertrofia", [["Supino (Barra)", 3, 0, "8-10", "10-12", "Eyes under the bar. Blades retracted and depressed, slight natural arch, glutes stay on the bench. Feet planted and pushing. Wrists stacked over the elbows.", "Bar to the lower chest or sternum. Elbows 45–75° from the torso with the forearms close to vertical. Quick pause on the chest, then drive.", "\"Row the bar down.\" \"Push yourself away from the bar.\"", "Elbows flared to 90° — the fastest route to shoulder pain. Bouncing off the chest. Hips lifting off the bench. Bar drifting toward the throat.", "45–75° is where the research converges: enough tuck to spare the shoulder, enough width to load the pecs. Perpendicular upper arms compress the shoulder into an impingement position under near-maximal load."], ["Prensa de Ombros", 2, 0, "8-10", "10-12", "Seat height so the handles sit around shoulder level. Back flat against the pad, core braced, feet planted.", "Press up smoothly. Make sure your elbows break at least 90° at the bottom of every rep. Stop just short of a hard lockout.", "\"Deep at the bottom, controlled at the top.\"", "Cutting the bottom of the range short — which is exactly where the stimulus is.", "Stopping above 90° keeps the delt in its shortened, mechanically strongest position and skips the lengthened portion. Same principle as everywhere else: the bottom of the range is the part worth having."], ["Crucifixo Reto (Halter)", 2, 1, "10-12", "12-15", "Flat bench. Soft elbow bend — set that angle and never change it. Blades retracted, shoulders down.", "Work only the bottom half of the range. Deep stretch across the chest, come up about halfway, return under control.", "\"Long arms.\" Feel the sternum open at the bottom.", "Creeping elbow bend as you fatigue, which turns the flye into a press and removes the exact stretch this exercise exists for.", "This is a deliberate lengthened partial. Lengthened partials have matched or beaten full range for growth in several trials — one found 48.7% vs 28.2% — because the stretched position is where the signal concentrates."], ["Elevação Lateral (Cabo)", 3, 1, "10-12", "12-15", "Cable at or slightly below shoulder height, standing side-on, slight forward lean into the handle. Neutral wrist.", "Squeeze the side delt to move the weight. Lead with the elbow. Raise to roughly shoulder height, control all the way down.", "\"Elbow leads, hand follows.\" Shoulders stay down.", "Shrugging. If your shoulders rise toward your ears, halve the weight — no exceptions. Skip the thumbs-down pour.", "Slight forward lean plus a scapular-plane path maximises middle-delt work while sparing the cuff. This is your priority muscle for the taper, so it deserves better execution than anything else in the session."], ["Overhead Triceps Extension", 2, 1, "10-12", "12-15", "Face away from the cable, bar behind the head, upper arms roughly beside your ears and staying there. Core braced so the ribs don't flare.", "Optional half-second pause in the stretched position. Extend without letting the elbows drift outward, then control back into the stretch.", "\"Upper arms are frozen.\" Elbows point forward, not out.", "Elbows flaring wide, which shifts the work off the long head — the exact head this exercise exists to train.", "One of the best-supported choices in your program. Maeo's trial found long-head growth of 28.5% overhead versus 19.6% with pushdowns, because the long head crosses the shoulder and only fully lengthens with the arm overhead."], ["Extensão de Tríceps Atrás", 3, 0, "12-15", "12-15", "Upright or bent over, whichever feels better. Upper arm parallel to the floor and locked there. Shoulder positioned back behind the torso at full squeeze.", "Extend to a straight arm with the triceps hard. Hold the squeeze briefly, control back.", "\"Lock the shoulder, extend the elbow.\"", "Swinging the upper arm to complete the rep — the single failure mode of this exercise.", "Peak resistance falls in the shortened position, which makes it a poor primary movement but a reasonable finisher. That's exactly how the program uses it — last, after the overhead work has already handled the long head."], ["Roman Chair Leg Raise", 2, 1, "10-20", "12-15", "Forearms on the pads, back against the support, shoulders pressed down away from the ears. Ribs pulled down.", "Allow the lower back to round as you curl the legs up — this is spinal flexion, not just hip flexion. Control the descent all the way.", "\"Curl the pelvis toward the ribs.\"", "Swinging the legs up with momentum and letting the body rock. If you're using the swing, the abs aren't doing it.", "The rounding is the point. Straight-leg raising with a flat back is almost entirely hip flexor work — the rectus abdominis only contributes once the spine actually flexes. The 10–20 rep range is deliberately broad: go by RPE."]]], ["fri", "Sexta", "Legs", "Hipertrofia", [["Leg Press 45°", 3, 0, "8-10", "10-12", "Feet lower on the platform for quad emphasis, roughly shoulder-width. Back and hips flat against the seat. Safeties set.", "Descend until just before your hips start to curl off the pad — usually around 90° of knee flexion. Slight pause at the bottom, then press without locking out hard.", "\"Hips glued to the seat.\"", "Chasing depth until the pelvis tucks under and the lower back rounds. That rounding under heavy load is the main injury risk on this machine. If your heels lift before the hips tuck, you're already past your usable depth.", "Going past the point of posterior pelvic tilt doesn't add useful muscle work — it converts hip flexion into loaded lumbar flexion. Correct depth is the deepest point your glutes stay pinned, not a fixed number."], ["Cadeira Flexora", 2, 1, "10-12", "12-15", "Thigh pad snug, back against the seat, hips flexed. Pad just above the heels.", "Lean forward over the machine to maximise the hamstring stretch, then curl. Squeeze, control the return.", "\"Chase the stretch.\"", "Sitting bolt upright, which gives away the entire advantage this variation has over the lying version.", "Hip flexion pre-stretches the biarticular hamstrings, and the seated curl produced roughly 14% muscle volume increase versus 9% for lying in direct comparison. If you only had one hamstring curl, this would be it."], ["Agachamento Búlgaro", 2, 0, "8-10", "10-12", "Rear foot on a bench behind you, front foot far enough forward that the shin stays roughly vertical at the bottom. Dumbbells at your sides, torso upright or leaning very slightly forward.", "Lower all the way down until the front thigh is parallel to the ground. Drive up through the front heel.", "\"Front heel drives, back leg just balances.\"", "Pushing off the back foot. Front foot too close, which jams the knee and shortens the range.", "One of the most productive quad and glute movements available, and unilateral, so it evens out left-right differences bilateral machines let you hide. Also brutally fatiguing for its load — respect that in a deficit."], ["Cadeira Extensora", 2, 1, "10-12", "12-15", "Seat back as far as is comfortable — this lengthens the rectus femoris. Pad just above the ankles. Grip the handles hard to pull your hips down into the seat.", "Full extension at the top with a brief squeeze. Two to three second negative on every single rep.", "\"Lower it like it's breakable.\"", "Slamming the stack down. The negative is most of the point of this exercise, and it's the first thing that disappears when the weight is too heavy.", "The rectus femoris crosses the hip, so a reclined seat trains it at a longer length. It's also the only quad movement here that isolates the knee extensors with no hip involvement."], ["Cadeira Adutora", 2, 1, "10-12", "12-15", "Seated with the pads against the inner thighs, back against the support, feet planted.", "Squeeze the thighs together under control. Hold briefly. Control the return into the stretch rather than letting the pads fling your legs apart.", "\"Squeeze, then resist the opening.\"", "Letting the weight snap your legs open at the end of the rep — that's where an adductor strain happens.", "The adductor magnus is a large muscle contributing real mass to the front of the thigh. The controlled eccentric is also good insurance for a group that's commonly strained."], ["Cadeira Abdutora", 2, 1, "10-12", "12-15", "Use the pads to increase range if your machine allows. Sit with the pads against the outer thighs.", "Lean forward and hold the rails to deepen the glute stretch, then push out under control. Squeeze at the end, controlled return.", "\"Lean in for the stretch.\"", "Sitting back and bouncing the weight out with momentum.", "Leaning forward flexes the hip, changing the line of pull to bias gluteus medius and upper glute max — the muscles that create width at the hip rather than mass at the back."], ["Panturrilha em Pé", 3, 1, "10-12", "12-15", "Balls of the feet on the platform, knees straight but not locked, torso upright and still.", "One to two second pause at the bottom. Rather than just rising onto the toes, think about rolling the ankle back and forth over the balls of the feet through the full range.", "\"Pause at the bottom, squeeze at the top.\"", "Fast bouncy reps that use Achilles tendon elasticity instead of the calf muscle.", "Unusually strong evidence here. A 12-week within-subject trial found standing raises produced far greater gastrocnemius growth than seated — 12.4% vs 1.7% lateral head, 9.2% vs 0.6% medial — because a straight knee lengthens the gastroc. The bottom pause removes the tendon bounce."]]]], "SWAPS": {"mon": [["Incline Bench Press (Barbell)", "45° Incline DB Press"], ["Cable Fly Crossovers", "Pec Deck"], ["Lat Pulldown (Cable)", "Dual-Handle Lat Pulldown"]], "tue": [["Agachamento no Smith", "Smith Static Lunge, pé elevado"], ["Levantamento Terra Romeno", "45° Hyperextension"], ["Panturrilha em Pé", "Leg Press Calf Press"], ["Abdominal na Corda", "Machine Crunch"]], "wed": [["Neutral-Grip Lat Pulldown", "Lean-Back Lat Pulldown"], ["Remada Iso-Lateral", "Chest-Supported T-Bar Row"], ["Encolhimento (Halteres)", "Cable Paused Shrug-In"], ["Rosca Direta na Polia", "Cable Rope Hammer Curl"], ["Rosca Scott", "DB Concentration Curl"]], "thu": [["Supino (Barra)", "Machine Chest Press"], ["Prensa de Ombros", "Seated DB Shoulder Press"], ["Crucifixo Reto (Halter)", "Bottom-Half Seated Cable Flye"], ["Extensão de Tríceps Atrás", "EZ-Bar Skull Crusher"], ["Roman Chair Leg Raise", "Ab Wheel Rollout"]], "fri": [["Leg Press 45°", "Hack Squat"], ["Agachamento Búlgaro", "Walking Lunge"]]}, "WEEKS": [[1, "Foundation", "Baseline", "RPE ~7", "Establish loads you control through full range with a 2–3s negative. Log everything."], [2, "Foundation", "Same sets, more effort", "RPE ~8", "Add load only where week 1 finished below RPE 7. Volume does not change."], [3, "Foundation", "Sets double", "RPE ~8", "35 → 70 sets. Do not also add weight — the volume jump is the progression."], [4, "Foundation", "Hold and load", "RPE 8–9", "Early sets now genuinely hard too, not just the last one."], [5, "Foundation", "Peak of block", "RPE ~9", "Photos and weekly weight average before next week's deload."], [6, "Deload", "Half volume + swap", "RPE ~6", "One set each, light, new exercises. Skipping this is how blocks fall apart in week 9."], [7, "Ramping", "Full volume, new lifts", "RPE 7–8", "Loads lower than block 1 — different exercises, expected, not regression."], [8, "Ramping", "Load up", "RPE ~8", "Beat week 7 on everything. Sets unchanged."], [9, "Ramping", "Failure begins", "Failure on isolations", "Last set of marked isolations only. Compounds stay RPE 8–9."], [10, "Ramping", "Hold", "Failure", "Watch recovery — failure plus a deficit is where stalls start."], [11, "Ramping", "Load up", "Failure", "Beat week 10."], [12, "Ramping", "Peak week", "RPE 9–10", "Photos, same light and time as week 5. Then a full deload week."]]}, START=new Date(2026,7,24), B1=[1,1,2,2,2], DK=['sun','mon','tue','wed','thu','fri','sat'];
+const $=i=>document.getElementById(i);
+/* All week maths lives in resolver.js so tests.html can assert against it. */
+const wkNo=()=>CB.currentWeek(new Date(),START);
+const sets=(e,w)=>CB.setsForWeek(e[1],w);
+const reps=(e,w)=>CB.repsForWeek(e[3],e[4],w);
+const fail=(e,w)=>CB.failureThisWeek(e[2]===1,w);
+
+/* Week 6 swap. SWAPS lists [blockA, blockB] pairs per day; anything unlisted
+   runs unchanged through both blocks. */
+const SWAP={};
+Object.keys(D.SWAPS).forEach(k=>{SWAP[k]={};D.SWAPS[k].forEach(p=>SWAP[k][p[0]]=p[1])});
+const swapFor=(dayKey,name)=>(SWAP[dayKey]||{})[name]||null;
+const exName=(dayKey,name,w)=>CB.exerciseForWeek(name,swapFor(dayKey,name)||name,w);
+
+/* The 20%: the handful of points per lift that decide what it trains.
+   Keyed on the block A name, so a swapped movement still shows the notes it
+   inherited — the swap banner above says so. Renders nothing if unwritten. */
+const p20=name=>{
+ const pts=(window.PARETO||{})[name];
+ if(!pts||!pts.length)return '';
+ return '<div class="p20"><span class="lb">The 20%</span><ol>'+
+  pts.map(p=>'<li>'+p+'</li>').join('')+'</ol></div>';
+};
+const wi=w=>D.WEEKS[Math.min(Math.max(w,1),12)-1];
+const total=w=>D.DAYS.reduce((a,d)=>a+d[4].reduce((b,e)=>b+sets(e,w),0),0);
+const WK=wkNo(), TODAY=DK[new Date().getDay()];
+
+/* Header mirrors Ignite's "Olá, / Rodrigo Gonçalves": the avatar slot holds the
+   week number, the two lines hold the phase and this week's headline. */
+if(WK>12){$('ava').innerHTML='<b>12</b><i>DONE</i>';$('hi1').textContent='Twelve weeks done';$('hi2').textContent='Take the deload'}
+else if(WK<1){$('ava').innerHTML='<b>—</b><i>WEEK</i>';$('hi1').textContent='Opens 24 August';$('hi2').textContent='Cutting Block'}
+else{$('ava').innerHTML='<b>'+WK+'</b><i>WEEK</i>';$('hi1').textContent=wi(WK)[1]+' · '+total(WK)+' sets';$('hi2').textContent=wi(WK)[2]}
+
+const ICO_CHEV='<svg viewBox="0 0 20 20"><path d="M7.5 4.5 13 10l-5.5 5.5"/></svg>';
+const ICO_BACK='<svg viewBox="0 0 24 24"><path d="M15 5 8 12l7 7"/></svg>';
+
+function slabs(day,w){return '<div class="xlist">'+day[4].map((e,i)=>{
+ const s=sets(e,w),f=fail(e,w),shown=exName(day[0],e[0],w),swapped=shown!==e[0];
+ return `<button type="button" class="xc" data-day="${day[0]}" data-i="${i}" data-w="${w}">
+  <span class="xth"><b>${s}</b><i>${s===1?'set':'sets'}</i></span>
+  <span class="xtx"><span class="t">${shown}</span><span class="d">${reps(e,w)} reps${f?' • <em>failure</em>':''}${swapped?' • <em>swapped</em>':''}</span></span>
+  <span class="chev">${ICO_CHEV}</span></button>`}).join('')+'</div>'}
+
+let exReturn=null;
+function openEx(dayKey,i,w){
+ const day=D.DAYS.find(d=>d[0]===dayKey), e=day[4][i];
+ const s=sets(e,w), f=fail(e,w), shown=exName(dayKey,e[0],w), swapped=shown!==e[0];
+ $('exdH').innerHTML=`<button type="button" class="back" id="exBack" aria-label="Back">${ICO_BACK}</button>
+  <h2 id="exdTitle">${shown}</h2><span class="grp">${day[2]} · ${day[1]}${f?' · last set to failure':''}</span>`;
+ $('exdB').innerHTML=`<div class="stats"><div><b>${s}</b><span>${s===1?'set':'sets'}</span></div>
+   <div><b>${reps(e,w)}</b><span>reps</span></div><div><b>${w}</b><span>week</span></div></div>
+  ${swapped?`<p class="swapnote"><b>Block B movement.</b> The technique notes below still describe ${e[0]}, the block A lift this replaced. Principles mostly carry, the set-up does not — worth writing proper notes for ${shown} before week 6.</p>`:''}
+  ${p20(e[0])}
+  <div class="f"><span class="lb">Set up</span><p>${e[5]}</p></div>
+  <div class="f"><span class="lb">Execute</span><p>${e[6]}</p></div>
+  <div class="f cue"><span class="lb">Cue</span><p>${e[7]}</p></div>
+  <div class="f no"><span class="lb">Don't</span><p>${e[8]}</p></div>
+  <div class="f why"><span class="lb">Why it matters</span><p>${e[9]}</p></div>`;
+ exReturn=document.activeElement;
+ $('exd').classList.add('on');$('exd').scrollTop=0;document.body.style.overflow='hidden';
+ setTimeout(()=>{try{$('exBack').focus({preventScroll:true})}catch(_){}},60);
+}
+function closeEx(){
+ if(!$('exd').classList.contains('on'))return;
+ $('exd').classList.remove('on');document.body.style.overflow='';
+ try{exReturn&&exReturn.focus({preventScroll:true})}catch(_){}
+}
+
+(function(){
+ if(WK<1){$('today').innerHTML='<div class="bill"><div class="over">Not started</div><h2 class="title">Block opens<br>24 August</h2></div>';return}
+ if(WK>12){$('today').innerHTML='<div class="bill"><div class="over">Twelve weeks done</div><h2 class="title">Take the<br>deload</h2><p class="sub">Photos in the same light as week 5, then bring the log for a progression audit before starting anything new.</p></div>';return}
+ const W=wi(WK), day=D.DAYS.find(d=>d[0]===TODAY);
+ let h='';
+ if(day){const t=day[4].reduce((a,e)=>a+sets(e,WK),0);
+  h=`<div class="bill"><div class="over">${day[1]} · ${day[3]}</div><h2 class="title">${day[2]}</h2>
+   <p class="sub">${day[4].length} exercises · ${t} working sets · target ${W[3]}</p>
+   <div class="tags"><span class="tag b">Week ${WK}</span><span class="tag">${W[1]}</span>${WK>=9?'<span class="tag b">Failure · isolations</span>':''}</div></div>
+   <div class="rule"><span>The card</span></div>${slabs(day,WK)}`;
+ }else{
+  h=`<div class="bill"><div class="over">${TODAY==='sat'?'Saturday':'Sunday'}</div><h2 class="title">Rest</h2>
+   <p class="sub">Boxing if it's on. Otherwise walk your 10k and let the week settle — recovery is where the block actually happens.</p>
+   <div class="tags"><span class="tag b">Week ${WK}</span><span class="tag">${W[1]}</span></div></div>`}
+ h+=`<div class="rule"><span>This week</span></div>
+  <div class="wk now"><h4>${W[2]}</h4><div class="tg">${W[3]}</div><p>${W[4]}</p></div>
+  <div class="said"><b>Every session</b> — log the reps you actually got, not the ones written down.
+  <b>Every morning</b> — weigh in the same way; only the weekly average means anything.</div>`;
+ if([3,6,9,12].includes(WK))h+=`<div class="said no"><b>Audit week.</b> Bring the Hevy log and your weigh-ins to a chat for a progression review.</div>`;
+ $('today').innerHTML=h})();
+
+let cur=D.DAYS.some(d=>d[0]===TODAY)?TODAY:'mon';
+function train(){
+ const w=WK<1?1:(WK>12?12:WK), day=D.DAYS.find(d=>d[0]===cur);
+ $('dtabs').innerHTML=D.DAYS.map(d=>`<button type="button" class="dtab${d[0]===cur?' on':''}" data-d="${d[0]}">${d[2]}</button>`).join('');
+ const sw=D.SWAPS[cur]||[];
+ let h=`<div class="sect"><h3>Exercises</h3><span>${day[4].length}</span></div>${slabs(day,w)}`;
+ if(sw.length)h+=`<div class="rule"><span>Week 6 swaps</span></div>
+  <div class="scroll"><table><thead><tr><th>Weeks 1–5</th><th>Weeks 6–12</th></tr></thead><tbody>
+  ${sw.map(s=>`<tr><td style="color:var(--faint)">${s[0]}</td><td>${s[1]}</td></tr>`).join('')}</tbody></table></div>
+  <div class="said">Everything not listed here stays put through both blocks.</div>`;
+ $('trainbody').innerHTML=h}
+train();
+
+$('progbody').innerHTML=`<p class="lede">Sets stay fixed inside each block — progression is load and effort. The only volume change in twelve weeks is the week 6 deload.</p>
+<div class="scroll"><table><thead><tr><th class="c">Wk</th><th>What changes</th><th>Target</th><th class="c">Sets</th></tr></thead><tbody>
+${D.WEEKS.map(w=>`<tr class="${w[0]===WK?'now':(w[0]===6?'dl':'')}"><td class="c"><b>${w[0]}</b></td><td>${w[2]}</td><td style="color:var(--dim)">${w[3]}</td><td class="c">${total(w[0])}</td></tr>`).join('')}
+</tbody></table></div><div class="rule"><span>Week by week</span></div>
+${D.WEEKS.map(w=>`<div class="wk${w[0]===WK?' now':''}"><h4>${w[0]} · ${w[2]}</h4><div class="tg">${w[3]}</div><p>${w[4]}</p></div>`).join('')}`;
+
+$('extrabody').innerHTML=`<p class="lede">About fifty minutes a week, spread out. None of it goes before your lifting. If something has to give, drop in this order: loaded carry, mobility, forearms, neck.</p>
+<div class="scroll"><table><thead><tr><th>Day</th><th>Add</th><th class="c">Min</th></tr></thead><tbody>
+<tr><td>Mon</td><td>Neck</td><td class="c">5</td></tr><tr><td>Tue</td><td style="color:var(--faint)">—</td><td class="c">—</td></tr>
+<tr><td>Wed</td><td>Neck</td><td class="c">5</td></tr><tr><td>Thu</td><td>Forearms</td><td class="c">7</td></tr>
+<tr><td>Fri</td><td>Neck + loaded carry</td><td class="c">8</td></tr>
+<tr><td>Sat</td><td>Boxing — technique only</td><td class="c">60</td></tr>
+<tr><td>Daily</td><td>Pelvic floor, at home</td><td class="c">5</td></tr></tbody></table></div>
+<div class="said no"><b>Never before pulling.</b> Forearm work ahead of Pull day caps your rows and pulldowns — the exercises that matter most for the taper. Thursday keeps the grip fresh.</div>
+<div class="rule"><span>Neck · 3× a week</span></div>
+<div class="body"><p><strong>Neck curl</strong> — 2 × 15–25. Face-up, head off the bench, tuck the chin and curl up in an arc.</p>
+<p><strong>Neck extension</strong> — 2 × 15–25. Face-down, same range, back to neutral.</p>
+<div class="said no"><b>Bodyweight only for 4–6 weeks.</b> Never ballistic, never through pain. Skip neck bridges entirely.</div></div>
+<div class="rule"><span>Forearms · Thursday</span></div>
+<div class="body"><p><strong>Wrist curl</strong> — 2–3 × 15–20. Let it roll to the fingertips, then crunch the fist.</p>
+<p><strong>Wrist extension</strong> — 2–3 × 15–20. Much lighter; start at 2–4 kg.</p>
+<div class="said">Full range is the whole game — partial wrist curls are why most forearm training does nothing. Extensions are the half everyone skips, and the one tied to elbow health.</div></div>
+<div class="rule"><span>Movement capacity · 2× a week</span></div>
+<div class="body"><p><strong>Hip thrust</strong> — 2–3 × 10–15. Your only direct glute work.</p>
+<p><strong>Cat-cow / pelvic tilts</strong> — 2 × 10 slow.</p><p><strong>Kneeling hip flexor stretch</strong> — 2 × 45s each side.</p>
+<p><strong>90/90 hip switches</strong> — 2 × 8 each side.</p><p><strong>Dead bug</strong> — 2 × 10 each side.</p>
+<div class="said">Mechanically reasoned, not trial-backed. It makes you better at hip extension regardless, which is the point.</div></div>
+<div class="rule"><span>Pelvic floor · daily</span></div>
+<div class="body"><p><strong>Long holds</strong> — 3 sets of 8–12, holding 5–10s, resting as long as you hold.</p>
+<p><strong>Quick pulses</strong> — 2 × 10 rapid contractions.</p>
+<div class="said">Expect nothing for 4–6 weeks; the trials ran 12 weeks to 6 months. Glutes and abs stay relaxed — if they tense, wrong muscle.</div>
+<div class="said no"><b>Don't train it by stopping urine mid-stream.</b> Fine to locate the muscle once; repeating it is linked to bladder dysfunction.</div></div>`;
+
+function nums(){
+ const g=i=>{const v=parseFloat($(i).value);return isNaN(v)?0:v};
+ const w=g('nw'),bf=g('nbf'),wa=g('nwaist'),sh=g('nsh'),tb=g('ntbf'),o=$('numout');
+ if(!w||!bf||!tb||tb>=bf){o.innerHTML='<div class="said">Enter a weight, a body fat, and a lower target.</div>';return}
+ const lean=w*(1-bf/100),tw=lean/(1-tb/100),lost=w-tw;
+ let h=`<div class="plates">
+  <div class="plate"><div class="k">Lean mass</div><div class="v">${lean.toFixed(1)}</div><div class="s">kg, held constant</div></div>
+  <div class="plate"><div class="k">Weight at ${tb}%</div><div class="v">${tw.toFixed(1)}</div><div class="s">kg · lose ${lost.toFixed(1)}</div></div>`;
+ if(wa){const pw=wa-lost*0.9;
+  h+=`<div class="plate hot"><div class="k">Waist then</div><div class="v">${pw.toFixed(0)}</div><div class="s">cm · range ${(wa-lost*1.33).toFixed(0)}–${(wa-lost*0.67).toFixed(0)}</div></div>`;
+  if(sh){const r=sh/pw;h+=`<div class="plate hot"><div class="k">Shoulder : waist</div><div class="v">${r.toFixed(2)}</div><div class="s">${r>=1.618?'At target':(pw*1.618-sh).toFixed(0)+' cm of shoulder short'}</div></div>`}}
+ h+='</div>';let rows='';
+ [21,18,15,12].forEach(t=>{if(t>=bf)return;const t2=lean/(1-t/100),l=w-t2;
+  rows+=`<tr class="${t===tb?'now':''}"><td class="c"><b>${t}%</b></td><td>${t2.toFixed(1)} kg</td><td style="color:var(--dim)">−${l.toFixed(1)} kg</td><td>${wa?'−'+(l*0.9).toFixed(0)+' cm':'—'}</td></tr>`});
+ h+=`<div class="scroll"><table><thead><tr><th class="c">BF</th><th>Weight</th><th>Change</th><th>Waist</th></tr></thead><tbody>${rows}</tbody></table></div>
+  <div class="said"><b>How this is figured.</b> Waist uses ~0.9 cm per kg lost, the standard male figure; the bracket spans 0.67–1.33, the published spread. Your bioimpedance body fat could be off by five points either way. Direction of travel, not a promise — remeasure monthly and it corrects itself.</div>`;
+ o.innerHTML=h}
+$('numbody').innerHTML=`<div class="rule"><span>Daily targets</span></div>
+<div class="plates">
+ <div class="plate hot"><div class="k">Calories</div><div class="v">2490</div><div class="s">cutting</div></div>
+ <div class="plate"><div class="k">Protein</div><div class="v">182</div><div class="s">g · non-negotiable</div></div>
+ <div class="plate"><div class="k">Fat</div><div class="v">66</div><div class="s">g · floor, not cap</div></div>
+ <div class="plate"><div class="k">Carbs</div><div class="v">290</div><div class="s">g · the flex</div></div></div>
+<div class="said">Only two of those really matter: total calories and protein. Fat and carbs trade freely so long as fat stays above 66 g. Hold this three weeks, then judge on the weekly average — never a single morning.</div>
+<div class="rule"><span>Waist projection</span></div>
+<div class="body">
+ <div class="fld"><label>Weight <small>kg</small></label><input id="nw" type="number" inputmode="decimal" step="0.1" value="82.6"></div>
+ <div class="fld"><label>Body fat <small>% — scale said 24.7; treat as ±5</small></label><input id="nbf" type="number" inputmode="decimal" step="0.1" value="24.7"></div>
+ <div class="fld"><label>Waist <small>cm — midway between bottom rib and hip bone, relaxed, normal exhale</small></label><input id="nwaist" type="number" inputmode="decimal" step="0.5" placeholder="—"></div>
+ <div class="fld"><label>Shoulders <small>cm — widest part of the delts, arms relaxed</small></label><input id="nsh" type="number" inputmode="decimal" step="0.5" placeholder="—"></div>
+ <div class="fld"><label>Target body fat <small>%</small></label><input id="ntbf" type="number" inputmode="decimal" step="0.5" value="15"></div>
+</div><div id="numout"></div>`;
+['nw','nbf','nwaist','nsh','ntbf'].forEach(i=>$(i).addEventListener('input',nums));nums();
+
+function show(id){document.querySelectorAll('section').forEach(s=>s.classList.toggle('on',s.id===id));
+ document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.s===id));window.scrollTo(0,0)}
+document.querySelectorAll('nav button').forEach(b=>b.addEventListener('click',()=>show(b.dataset.s)));
+document.addEventListener('click',e=>{
+ const c=e.target.closest('.xc');if(c){openEx(c.dataset.day,+c.dataset.i,+c.dataset.w);return}
+ if(e.target.closest('#exBack')){closeEx();return}
+ const d=e.target.closest('.dtab');if(d){cur=d.dataset.d;train()}});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeEx()});
+
+/* ══════════════ v1 shell: persistence, export, offline ══════════════ */
+const STORE='cuttingblock.v1', NUM_IDS=['nw','nbf','nwaist','nsh','ntbf'];
+const readStore=()=>{try{return JSON.parse(localStorage.getItem(STORE))||{}}catch(e){return{}}};
+const writeStore=s=>{try{localStorage.setItem(STORE,JSON.stringify(s))}catch(e){}};
+
+let toastTimer;
+const toastEl=document.createElement('div');
+toastEl.className='toast';toastEl.setAttribute('role','status');document.body.appendChild(toastEl);
+function toast(m){toastEl.textContent=m;toastEl.classList.add('on');
+ clearTimeout(toastTimer);toastTimer=setTimeout(()=>toastEl.classList.remove('on'),2400)}
+
+/* restore the measurements you last typed, then recompute */
+(function(){const s=readStore();if(!s.numbers)return;
+ NUM_IDS.forEach(i=>{const v=s.numbers[i];if(v!==undefined&&v!==null&&v!=='')$(i).value=v});
+ nums()})();
+
+NUM_IDS.forEach(i=>$(i).addEventListener('input',()=>{
+ const s=readStore();s.numbers=s.numbers||{};
+ NUM_IDS.forEach(k=>s.numbers[k]=$(k).value);
+ s.savedAt=new Date().toISOString();writeStore(s)}));
+
+/* export — the only copy of your measurements lives in this browser */
+$('numbody').insertAdjacentHTML('beforeend',
+ '<div class="rule"><span>Your data</span></div>'+
+ '<div class="body"><p>Your measurements and goal ticks are saved on this phone only. Nothing is uploaded and there is no copy '+
+ 'anywhere else, so export one into Notes now and then.</p>'+
+ '<div class="fld"><label>Export <small>copies everything as JSON</small></label>'+
+ '<button type="button" class="btn" id="expBtn">Copy</button></div>'+
+ '<div class="fld"><label>Restore <small>copy an export first, then tap — replaces what is on this phone</small></label>'+
+ '<button type="button" class="btn" id="impBtn">Paste</button></div></div>');
+
+/* restore — the other half of export. Clipboard first; iOS shows its Paste
+   bubble. If the clipboard is unavailable, fall back to a paste box. */
+function restoreFrom(txt){
+ let data;
+ try{data=JSON.parse(String(txt||'').trim())}catch(_){toast('That is not an export — nothing changed');return}
+ if(!data||data.app!=='Cutting Block'||typeof data!=='object'){toast('That is not a Cutting Block export — nothing changed');return}
+ const n=Object.keys(data.goals||{}).length;
+ if(!confirm('Replace this phone’s data with the export from '+
+   (data.exportedAt?new Date(data.exportedAt).toLocaleDateString():'an unknown date')+'?\n\n'+n+' goal'+(n===1?'':'s')+' ticked, measurements included.'))return;
+ const s=readStore();
+ s.numbers=data.numbers||{};s.goals=data.goals||{};s.restoredAt=new Date().toISOString();
+ writeStore(s);location.reload();
+}
+$('impBtn').addEventListener('click',()=>{
+ const manual=()=>{const t=prompt('Paste the exported JSON here');if(t!==null)restoreFrom(t)};
+ if(navigator.clipboard&&navigator.clipboard.readText)
+  navigator.clipboard.readText().then(t=>t?restoreFrom(t):manual(),manual);
+ else manual();
+});
+
+/* Install prompt. A Safari tab and the Home Screen icon keep SEPARATE storage on
+   iOS, so ticking goals in a tab and then installing would look like data loss.
+   Shown only in a browser tab on iPhone/iPad; ?install forces it for testing. */
+(function(){
+ const ios=/iPhone|iPad|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+ const installed=window.navigator.standalone===true||matchMedia('(display-mode: standalone)').matches;
+ const forced=/[?&]install\b/.test(location.search);
+ if(!forced&&(!ios||installed||readStore().hideInstall))return;
+ const share='<svg viewBox="0 0 24 24"><path d="M12 3v12M8 7l4-4 4 4M5 12v7a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-7"/></svg>';
+ document.querySelector('main').insertAdjacentHTML('afterbegin',
+  `<div class="inst" id="inst" role="note"><div class="tx"><b>Install this on your iPhone</b>
+   Tap ${share} Share, then <b style="display:inline;font-size:14px">Add to Home Screen</b>, and open it from that icon.
+   Anything you save in this Safari tab stays here and won’t carry over to the icon.</div>
+   <button type="button" class="x" id="instX" aria-label="Dismiss"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>`);
+ $('instX').addEventListener('click',()=>{const s=readStore();s.hideInstall=true;writeStore(s);$('inst').remove()});
+})();
+
+/* Ask iOS to keep this app's storage. Home Screen apps are already exempt from
+   Safari's seven-day eviction; this covers low-storage clean-ups as well. */
+try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist().catch(()=>{})}catch(_){}
+
+$('expBtn').addEventListener('click',()=>{
+ const s=readStore();
+ const txt=JSON.stringify({app:'Cutting Block',exportedAt:new Date().toISOString(),
+  startDate:'2026-08-24',week:WK,numbers:s.numbers||{},goals:s.goals||{}},null,2);
+ if(navigator.clipboard&&navigator.clipboard.writeText)
+  navigator.clipboard.writeText(txt).then(()=>toast('Copied as JSON'),()=>toast('Could not copy — try again'));
+ else toast('Clipboard unavailable in this browser')});
+
+/* ══════════════ goals — the "Greek God" standard, as checklists ══════════════
+   Ticks are stored as {id: ISO date first ticked} so the list can say when you
+   hit something. Ids are stable: rename a label freely, but never reuse an id. */
+const GOALS=[
+ ["Body composition",null,[
+  ["bf","Body fat","8–12%"],
+  ["bmi","BMI","24–26"],
+  ["ffmi","FFMI","22–25"],
+  ["lean","Lean mass for your height",'<span class="nw">178 lb at 5′10″</span> · <span class="nw">185 lb at 6′0″</span> · <span class="nw">194 lb at 6′2″</span>']]],
+ ["Ratios",null,[
+  ["r-sw","Shoulder to waist","1.6"],
+  ["r-cw","Chest to waist","1.4"],
+  ["r-wh","Waist to height","0.42"],
+  ["r-arm","Upper arm","2.5 × wrist"],
+  ["r-calf","Calf","1.9 × ankle"],
+  ["r-thigh","Thigh","1.75 × knee"]]],
+ ["Frame","Bone structure. Measure once — training doesn't change it.",[
+  ["f-wrist","Wrist","7–7.5 in"],
+  ["f-wing","Wingspan","Equal to height or longer"],
+  ["f-clav","Clavicles","0.25 × height"]]],
+ ["Strength","bw = body weight",[
+  ["s-press","Standing press","1 × bw"],
+  ["s-incline","Incline bench","1.25 × bw for 5"],
+  ["s-flat","Flat bench","1.5 × bw for 5"],
+  ["s-wpull","Weighted pull-up","+50% bw added, for 5"],
+  ["s-wdip","Weighted dip","+50% bw added, for 5"],
+  ["s-row","Row","1.25 × bw for 5"],
+  ["s-squat","Squat","2 × bw"],
+  ["s-dl","Deadlift","2.5 × bw"],
+  ["s-carry","Farmer's carry","bw per hand, 40 m"],
+  ["s-pullups","Strict pull-ups","20 reps"],
+  ["s-dips","Dips","30 reps"],
+  ["s-nordic","Nordic curl","5 reps"],
+  ["s-hang","Dead hang","3 minutes"],
+  ["s-grip","Grip","60 kg on a dynamometer"]]],
+ ["Athleticism",null,[
+  ["a-100","100 metres","Under 13 s"],
+  ["a-40","40 yards","Under 5.0 s"],
+  ["a-vj","Vertical jump","24 in"],
+  ["a-bj","Broad jump","8 ft"],
+  ["a-mile","Mile","Under 6:15"],
+  ["a-rhr","Resting heart rate","In the 50s"],
+  ["a-bp","Blood pressure","Under 120/80"]]],
+ ["Structure",null,[
+  ["m-squat","Deep squat","Flat-footed"],
+  ["m-ohs","Overhead squat with dowel","Heels down"],
+  ["m-clasp","Hands clasp behind back","Both sides"],
+  ["m-balance","One leg, eyes closed","30 seconds"],
+  ["m-ktw","Knee to wall","4 in"],
+  ["m-asym","Walking asymmetry","0.0% in iPhone Health"]]],
+ ["Visible at rest",null,[
+  ["v-abs","Abs","In bad lighting, no flexing"],
+  ["v-jaw","Jaw-to-neck angle","105–120°"],
+  ["v-cheek","Cheekbones","Visible"],
+  ["v-fveins","Forearm veins","Visible"],
+  ["v-abveins","Lower ab veins","Visible"],
+  ["v-delts","Deltoids","Separate from the arms"],
+  ["v-neck","Collar (neck)","16.5–17 in"]]]
+];
+const ICO_TICK='<svg viewBox="0 0 16 16"><path d="M3.5 8.5 6.5 11.5 12.5 4.5"/></svg>';
+const hitOn=iso=>{try{return new Date(iso).toLocaleDateString(undefined,{day:'numeric',month:'short'})}catch(_){return''}};
+function goals(){
+ const got=readStore().goals||{}, all=GOALS.flatMap(g=>g[2]), done=all.filter(i=>got[i[0]]).length;
+ let h=`<div class="gsum"><div class="row"><b>${done} <small>of ${all.length}</small></b><span>standards hit</span></div>
+  <div class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="${all.length}" aria-valuenow="${done}"><i style="width:${(done/all.length*100).toFixed(1)}%"></i></div></div>`;
+ GOALS.forEach(([name,note,items])=>{
+  const n=items.filter(i=>got[i[0]]).length;
+  h+=`<div class="gsect"><div class="sect"><h3>${name}</h3><span>${n}/${items.length}</span></div>
+   ${note?`<p class="gnote">${note}</p>`:''}<div class="glist">`+
+   items.map(([id,label,target])=>{const on=!!got[id];
+    return `<button type="button" class="gi" role="checkbox" aria-checked="${on}" data-goal="${id}">
+     <span class="gbox">${ICO_TICK}</span>
+     <span class="gtx"><span class="t">${label}</span><span class="d">${target}${on?' · hit '+hitOn(got[id]):''}</span></span></button>`}).join('')+
+   '</div></div>'});
+ $('goalsbody').innerHTML=h;
+}
+goals();
+document.addEventListener('click',e=>{
+ const b=e.target.closest('.gi');if(!b)return;
+ const s=readStore();s.goals=s.goals||{};const id=b.dataset.goal;
+ if(s.goals[id])delete s.goals[id];else s.goals[id]=new Date().toISOString();
+ writeStore(s);
+ const y=window.scrollY;goals();window.scrollTo(0,y);
+ const again=document.querySelector(`.gi[data-goal="${id}"]`);if(again)again.focus({preventScroll:true});
+});
+
+/* offline. Registered only when self-hosted over http(s); file:// and the artifact host have no sw.js. */
+if('serviceWorker' in navigator && location.protocol.indexOf('http')===0 &&
+   location.hostname.indexOf('claude.ai')===-1){
+ window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}))}
+</script>
+</body>
+</html>

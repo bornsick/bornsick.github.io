@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Cutting Block — resolver tests</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#08090B">
+<style>
+:root{--void:#08090B;--card:#12151A;--ink:#F4F1EC;--dim:#9CA2A9;--faint:#6A7077;
+ --rule:#22262C;--brass:#E8B04B;--brass-wash:#1D1708;--red:#DE5B41;--red-wash:#22120F;--green:#5BC98C}
+*{box-sizing:border-box}
+body{margin:0;background:var(--void);color:var(--ink);font:400 15px/1.5 Barlow,-apple-system,BlinkMacSystemFont,Arial,sans-serif;
+ font-variant-numeric:tabular-nums;padding:22px 16px 60px;max-width:720px;margin:0 auto}
+h1{font-family:Impact,sans-serif;font-size:26px;letter-spacing:.05em;text-transform:uppercase;margin:0 0 4px}
+.lede{color:var(--dim);font-size:14px;margin:0 0 20px}
+#sum{border-top:3px solid var(--brass);border-bottom:1px solid var(--rule);padding:14px 0;margin-bottom:18px}
+#sum .big{font-family:Impact,sans-serif;font-size:42px;line-height:1;letter-spacing:.02em}
+#sum.ok .big{color:var(--green)} #sum.bad .big{color:var(--red)}
+#sum .s{color:var(--dim);font-size:13px;margin-top:6px}
+.grp{font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--brass);
+ margin:22px 0 8px;display:flex;align-items:center;gap:11px}
+.grp:after{content:"";flex:1;height:1px;background:var(--rule)}
+.t{display:flex;gap:10px;padding:8px 0;border-bottom:1px solid var(--rule);font-size:13.5px;align-items:baseline}
+.t .m{flex:0 0 42px;font-family:Impact,sans-serif;font-size:11px;letter-spacing:.1em}
+.t.p .m{color:var(--green)} .t.f .m{color:var(--red)}
+.t .n{flex:1;min-width:0}
+.t .d{color:var(--faint);font-size:12px;margin-top:3px}
+.t.f{background:var(--red-wash)}
+.t.f .d{color:var(--red)}
+</style>
+</head>
+<body>
+<h1>Resolver tests</h1>
+<p class="lede">Build order step 2. The week boundaries, the week&nbsp;6 swap and the week&nbsp;9 failure switch
+are where bugs hide, so they get asserted before anything renders. Open this file directly — no build step, no network.</p>
+<div id="sum"></div>
+<div id="out"></div>
+
+<script src="resolver.js"></script>
+<script>
+(function(){
+"use strict";
+var pass=0, fail=0, html="", group="";
+
+function G(name){ group=name; html+='<div class="grp"><span>'+name+'</span></div>'; }
+function eq(name, actual, expected){
+  var ok = Object.is(actual, expected);
+  if(ok) pass++; else fail++;
+  html+='<div class="t '+(ok?'p':'f')+'"><span class="m">'+(ok?'PASS':'FAIL')+'</span>'+
+        '<span class="n">'+name+(ok?'':'<span class="d">expected <b>'+expected+'</b>, got <b>'+actual+'</b></span>')+'</span></div>';
+}
+
+/* Block starts Monday 24 August 2026. Month is 0-indexed. */
+var START = new Date(2026,7,24);
+function day(n, h, m){ var d=new Date(2026,7,24); d.setDate(d.getDate()+n); if(h!=null) d.setHours(h,m||0,0,0); return d; }
+
+/* ── currentWeek ───────────────────────────────────────────── */
+G("currentWeek — boundaries");
+eq("day before the block opens is week 0",      CB.currentWeek(day(-1), START), 0);
+eq("a month early is still week 0",             CB.currentWeek(day(-30), START), 0);
+eq("start Monday is week 1",                    CB.currentWeek(day(0), START), 1);
+eq("day 6, the Sunday, is still week 1",        CB.currentWeek(day(6), START), 1);
+eq("day 7, the next Monday, rolls to week 2",   CB.currentWeek(day(7), START), 2);
+eq("day 34 is week 5, the last before deload",  CB.currentWeek(day(34), START), 5);
+eq("day 35 is week 6, the deload",              CB.currentWeek(day(35), START), 6);
+eq("day 41 is still week 6",                    CB.currentWeek(day(41), START), 6);
+eq("day 42 is week 7, block B opens",           CB.currentWeek(day(42), START), 7);
+eq("day 56 is week 9, failure begins",          CB.currentWeek(day(56), START), 9);
+eq("day 83 is week 12, the last day",           CB.currentWeek(day(83), START), 12);
+eq("day 84 is week 13, block is over",          CB.currentWeek(day(84), START), 13);
+
+G("currentWeek — time of day cannot shift the week");
+eq("00:01 on the boundary day",                 CB.currentWeek(day(7,0,1), START), 2);
+eq("23:59 on the boundary day",                 CB.currentWeek(day(7,23,59), START), 2);
+eq("23:59 the day before the boundary",         CB.currentWeek(day(6,23,59), START), 1);
+eq("start date passed with a time component",   CB.currentWeek(day(0,18,30), new Date(2026,7,24,9,15)), 1);
+
+/* ── setsForWeek ───────────────────────────────────────────── */
+G("setsForWeek — block A ramp, deload, block B");
+eq("week 1 is one set",                         CB.setsForWeek(3, 1), 1);
+eq("week 2 is one set",                         CB.setsForWeek(3, 2), 1);
+eq("week 3 doubles to two",                     CB.setsForWeek(3, 3), 2);
+eq("week 4 holds at two",                       CB.setsForWeek(3, 4), 2);
+eq("week 5 holds at two",                       CB.setsForWeek(3, 5), 2);
+eq("week 6 deload drops to one",                CB.setsForWeek(3, 6), 1);
+eq("week 7 takes the block B count",            CB.setsForWeek(3, 7), 3);
+eq("week 12 still takes the block B count",     CB.setsForWeek(3, 12), 3);
+eq("block A ignores the block B count",         CB.setsForWeek(9, 3), 2);
+eq("a 2-set exercise in block B",               CB.setsForWeek(2, 8), 2);
+
+/* ── exerciseForWeek — the week 6 swap ─────────────────────── */
+G("exerciseForWeek — the week 6 swap");
+eq("week 1 shows the block A lift",             CB.exerciseForWeek("Supino (Barra)","Machine Chest Press",1), "Supino (Barra)");
+eq("week 5 still shows block A",                CB.exerciseForWeek("Supino (Barra)","Machine Chest Press",5), "Supino (Barra)");
+eq("week 6 swaps to block B",                   CB.exerciseForWeek("Supino (Barra)","Machine Chest Press",6), "Machine Chest Press");
+eq("week 7 stays on block B",                   CB.exerciseForWeek("Supino (Barra)","Machine Chest Press",7), "Machine Chest Press");
+eq("week 12 stays on block B",                  CB.exerciseForWeek("Supino (Barra)","Machine Chest Press",12), "Machine Chest Press");
+eq("an unswapped lift is unchanged in block A", CB.exerciseForWeek("Cadeira Extensora","Cadeira Extensora",3), "Cadeira Extensora");
+eq("an unswapped lift is unchanged in block B", CB.exerciseForWeek("Cadeira Extensora","Cadeira Extensora",9), "Cadeira Extensora");
+
+/* ── repsForWeek ───────────────────────────────────────────── */
+G("repsForWeek — same boundary as the swap");
+eq("week 1 uses the block A range",             CB.repsForWeek("6-8","8-10",1), "6-8");
+eq("week 5 uses the block A range",             CB.repsForWeek("6-8","8-10",5), "6-8");
+eq("week 6 moves to the block B range",         CB.repsForWeek("6-8","8-10",6), "8-10");
+eq("week 12 uses the block B range",            CB.repsForWeek("6-8","8-10",12), "8-10");
+
+/* ── failureThisWeek ───────────────────────────────────────── */
+G("failureThisWeek — switches on at week 9, marked isolations only");
+eq("week 8, marked, is not yet failure",        CB.failureThisWeek(true, 8), false);
+eq("week 9, marked, is failure",                CB.failureThisWeek(true, 9), true);
+eq("week 12, marked, is failure",               CB.failureThisWeek(true, 12), true);
+eq("week 9, unmarked compound, is not",         CB.failureThisWeek(false, 9), false);
+eq("week 11, unmarked compound, is not",        CB.failureThisWeek(false, 11), false);
+eq("week 1, marked, is not",                    CB.failureThisWeek(true, 1), false);
+eq("deload week, marked, is not",               CB.failureThisWeek(true, 6), false);
+
+/* ── the volume claim in the week 3 note ───────────────────── */
+G("volume — the week 3 note says 35 sets become 70");
+var EXERCISES = 35;   // 7 + 6 + 8 + 7 + 7 across the five training days
+eq("week 2 across the programme is 35 sets",    EXERCISES * CB.setsForWeek(3,2), 35);
+eq("week 3 across the programme is 70 sets",    EXERCISES * CB.setsForWeek(3,3), 70);
+eq("week 6 deload halves it back to 35",        EXERCISES * CB.setsForWeek(3,6), 35);
+
+document.getElementById("out").innerHTML = html;
+var sum = document.getElementById("sum");
+sum.className = fail ? "bad" : "ok";
+sum.innerHTML = '<div class="big">'+(fail? fail+" FAILED" : "ALL PASS")+'</div>'+
+  '<div class="s">'+pass+' passed, '+fail+' failed, '+(pass+fail)+' assertions</div>';
+})();
+</script>
+</body>
+</html>

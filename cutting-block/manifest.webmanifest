@@ -1,0 +1,17 @@
+{
+  "name": "Cutting Block",
+  "short_name": "Cutting Block",
+  "description": "Programme brain for the twelve-week cutting block. Sits beside Hevy, does not replace it.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#121214",
+  "theme_color": "#202024",
+  "categories": ["health", "fitness"],
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
