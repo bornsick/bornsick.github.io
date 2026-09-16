@@ -1,0 +1,466 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>PDF Splitter</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#202024">
+<meta name="color-scheme" content="dark">
+<meta name="robots" content="noindex">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="PDF Splitter">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap">
+<style>
+:root{--g700:#121214;--g600:#202024;--g500:#29292E;--g400:#323238;--g300:#7C7C8A;--g200:#C4C4CC;--g100:#E1E1E6;
+ --green:#00B37E;--green-d:#00875F;--amber:#FBA94C;--red:#F75A68;
+ --font:Roboto,-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html{-webkit-text-size-adjust:100%;background:var(--g700)}
+body{margin:0;background:var(--g700);color:var(--g100);font:400 16px/1.5 var(--font)}
+button,input{font:inherit;color:inherit}
+header{background:var(--g600);padding:calc(env(safe-area-inset-top,0px) + 32px) 24px 24px}
+header h1{margin:0;font-size:20px;font-weight:700}
+header p{margin:4px 0 0;font-size:14px;color:var(--g200)}
+main{padding:24px 24px calc(env(safe-area-inset-bottom,0px) + 32px);max-width:720px;margin:0 auto}
+
+.drop{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;width:100%;min-height:120px;
+ background:var(--g600);border:1px dashed var(--g300);border-radius:8px;padding:16px;text-align:center;cursor:pointer}
+.drop.busy{opacity:.5;pointer-events:none}
+.drop.over{border-color:var(--green);background:var(--g500)}
+.drop b{font-size:16px}
+.drop span{font-size:14px;color:var(--g200)}
+.drop svg{width:32px;height:32px;stroke:var(--green);fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+
+.hint{margin:8px 2px 0;font-size:13px;line-height:1.45;color:var(--g300)}
+
+.btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;height:54px;border:0;border-radius:6px;
+ background:var(--green-d);color:#fff;font-size:16px;font-weight:700;cursor:pointer}
+.btn:active{background:var(--green)}
+.btn:disabled{opacity:.45;cursor:default}
+.btn.ghost{background:none;border:1px solid var(--green);color:var(--green)}
+.btn.ghost:active{background:var(--g500)}
+.status{margin:12px 2px 0;font-size:14px;color:var(--g200);min-height:21px}
+.bar{height:4px;border-radius:2px;background:var(--g500);overflow:hidden;margin-top:8px}
+.bar i{display:block;height:100%;width:0;background:var(--green);transition:width .2s}
+
+.result{margin-top:16px;background:var(--g600);border-radius:8px;overflow:hidden}
+.result>header{background:none;padding:14px 14px 10px}
+.result>header b{display:block;font-size:16px;word-break:break-word}
+.result>header small{display:block;margin-top:2px;font-size:13px;color:var(--g200)}
+.warn{margin:0 14px 10px;padding:8px 10px;border-radius:6px;background:rgba(251,169,76,.12);color:var(--amber);font-size:13px;line-height:1.4}
+.warn.bad{background:rgba(247,90,104,.12);color:var(--red)}
+.part{display:flex;align-items:center;gap:12px;padding:10px 8px 10px 14px;border-top:1px solid var(--g500)}
+.part .tx{flex:1;min-width:0}
+.part b{display:block;font-size:15px}
+.part small{display:block;font-size:13px;color:var(--g200)}
+.part em{display:block;font-style:normal;font-size:12px;color:var(--g300);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.part .over{color:var(--amber)}
+.dl{flex:0 0 44px;height:44px;border:0;border-radius:6px;background:var(--g500);color:var(--green);cursor:pointer;display:grid;place-items:center}
+.dl:active{background:var(--g400)}
+.dl svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.actions{display:grid;gap:8px;margin-top:16px}
+
+.how{margin:32px 0 0;background:var(--g600);border-radius:8px;padding:14px 16px;font-size:14px;line-height:1.55;color:var(--g200)}
+.how b{color:var(--g100)}
+.how p{margin:0}
+.how p+p{margin-top:8px}
+.back{display:inline-block;margin-top:16px;font-size:14px;color:var(--g300)}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<header><h1>PDF Splitter</h1><p>Cut big PDFs into parts that fit a Claude Project. Nothing leaves this device.</p></header>
+<main>
+ <label class="drop" id="drop">
+  <input type="file" id="pick" accept="application/pdf,.pdf" multiple hidden>
+  <svg viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M12 18v-6M9 15l3-3 3 3"/></svg>
+  <b>Choose PDFs</b><span>They split as soon as you pick them</span>
+ </label>
+ <p class="hint">Each part is sized so Claude reads all of it: up to 100 pages and under 30 MB.</p>
+
+ <div id="prog" hidden><p class="status" id="status"></p><div class="bar"><i id="barFill"></i></div></div>
+
+ <div id="results"></div>
+ <div class="actions" id="actions" hidden>
+  <button class="btn" id="zipAll">Save all as .zip</button>
+  <button class="btn ghost" id="shareAll" hidden>Share all to Files…</button>
+ </div>
+
+ <div class="how">
+  <p><b>How to use:</b> pick your PDFs, tap <b>Save all</b>, then upload every part <i>and</i> the index file to your Claude Project.</p>
+  <p>Claude reads a PDF of 100 pages or fewer as text and as page images, so charts, tables and scans all come through. Parts end where a chapter starts if the PDF has bookmarks. Each page is stamped with its page number in the original, so the pages Claude cites match your copy.</p>
+ </div>
+ <a class="back" href="../">← All apps</a>
+</main>
+
+<script src="vendor/pdf-lib.min.js"></script>
+<script src="vendor/pdf.min.js"></script>
+<script src="vendor/jszip.min.js"></script>
+<script>
+'use strict';
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'vendor/pdf.worker.min.js';
+const { PDFDocument, StandardFonts, rgb, degrees } = PDFLib;
+
+// Claude reads a PDF fully (text + page images) at 100 pages or fewer; uploads cap at 30 MB.
+const LIMITS = { pages: 100, bytes: 30 * 1024 * 1024, tokens: Infinity };
+const OPTS = { chapters: true, stamp: true, index: true };
+const CHARS_PER_TOKEN = 4;
+const $ = s => document.querySelector(s);
+let queue = [];            // {file}
+let outputs = [];          // {name, bytes, mime}
+let busy = false;
+
+/* ---------- picking files (splitting starts immediately) ---------- */
+const fmtMB = b => (b / 1048576 < 0.1 ? '<0.1' : (b / 1048576).toFixed(1)) + ' MB';
+const fmtTok = t => t >= 1000 ? '≈' + Math.round(t / 1000) + 'K tokens' : '≈' + t + ' tokens';
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+function addFiles(list) {
+  if (busy) return;
+  const pdfs = [...list].filter(f => /\.pdf$/i.test(f.name) || f.type === 'application/pdf');
+  if (!pdfs.length) return;
+  queue = pdfs.map(file => ({ file }));
+  runSplit();
+}
+$('#pick').addEventListener('change', e => { addFiles(e.target.files); e.target.value = ''; });
+const drop = $('#drop');
+['dragenter', 'dragover'].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.add('over'); }));
+['dragleave', 'drop'].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.remove('over'); }));
+drop.addEventListener('drop', e => addFiles(e.dataTransfer.files));
+
+/* ---------- progress ---------- */
+function progress(msg, frac) {
+  $('#prog').hidden = false;
+  $('#status').textContent = msg;
+  if (frac != null) $('#barFill').style.width = Math.round(frac * 100) + '%';
+}
+const tick = () => new Promise(r => setTimeout(r, 0));
+
+/* ---------- analysis (pdf.js): text per page + bookmarks ---------- */
+async function analyse(data, onPage) {
+  const doc = await pdfjsLib.getDocument({ data, isEvalSupported: false }).promise;
+  const n = doc.numPages;
+  const chars = new Array(n).fill(0);
+  for (let i = 1; i <= n; i++) {
+    const page = await doc.getPage(i);
+    const tc = await page.getTextContent();
+    let c = 0;
+    for (const it of tc.items) if (it.str) c += it.str.replace(/\s+/g, ' ').length;
+    chars[i - 1] = c;
+    page.cleanup();
+    if (i % 10 === 0 || i === n) onPage(i, n);
+  }
+  // Bookmarks, two levels deep: [{title, page (0-based), level}]
+  const marks = [];
+  async function walk(items, level) {
+    for (const it of items || []) {
+      try {
+        let dest = it.dest;
+        if (typeof dest === 'string') dest = await doc.getDestination(dest);
+        if (Array.isArray(dest) && dest[0] != null) {
+          const idx = typeof dest[0] === 'number' ? dest[0] : await doc.getPageIndex(dest[0]);
+          if (idx >= 0 && idx < n) marks.push({ title: (it.title || '').trim(), page: idx, level });
+        }
+      } catch (e) {}
+      if (level < 2) await walk(it.items, level + 1);
+    }
+  }
+  try { await walk(await doc.getOutline(), 1); } catch (e) {}
+  marks.sort((a, b) => a.page - b.page || a.level - b.level);
+  await doc.destroy();
+  return { n, chars, marks };
+}
+
+/* ---------- building parts (pdf-lib) ---------- */
+async function buildPart(src, from, to, opts) {
+  const out = await PDFDocument.create();
+  const idx = []; for (let i = from; i <= to; i++) idx.push(i);
+  const pages = await out.copyPages(src, idx);
+  let font = null;
+  if (opts.stamp) font = await out.embedFont(StandardFonts.Helvetica);
+  pages.forEach((p, k) => {
+    out.addPage(p);
+    if (font) stamp(p, font, `p. ${from + k + 1}`);
+  });
+  out.setTitle(opts.title);
+  out.setSubject(opts.subject);
+  out.setProducer('PDF Splitter');
+  out.setCreator('PDF Splitter');
+  return out.save({ useObjectStreams: true });
+}
+
+// Small label in the visual bottom-left corner, honouring page rotation.
+function stamp(page, font, text) {
+  const size = 7, pad = 2, m = 6;
+  const box = page.getCropBox();
+  const x0 = box.x, y0 = box.y, x1 = box.x + box.width, y1 = box.y + box.height;
+  const r = ((page.getRotation().angle % 360) + 360) % 360;
+  const corner = { 0: [x0 + m, y0 + m], 90: [x1 - m, y0 + m], 180: [x1 - m, y1 - m], 270: [x0 + m, y1 - m] }[r] || [x0 + m, y0 + m];
+  const rad = r * Math.PI / 180;
+  const rot = (dx, dy) => [dx * Math.cos(rad) - dy * Math.sin(rad), dx * Math.sin(rad) + dy * Math.cos(rad)];
+  const w = font.widthOfTextAtSize(text, size) + pad * 2, h = size + pad * 2;
+  page.drawRectangle({ x: corner[0], y: corner[1], width: w, height: h, rotate: degrees(r), color: rgb(1, 1, 1), opacity: 0.85 });
+  const [tx, ty] = rot(pad, pad + 1);
+  page.drawText(text, { x: corner[0] + tx, y: corner[1] + ty, size, font, rotate: degrees(r), color: rgb(0.35, 0.35, 0.4) });
+}
+
+// Decide page ranges by page and token limits, then shrink any part that is too big in bytes.
+function planRanges(info, lim, useChapters) {
+  const tok = info.chars.map(c => Math.ceil(c / CHARS_PER_TOKEN));
+  const starts = new Set(useChapters ? info.marks.map(m => m.page) : []);
+  const ranges = [];
+  let s = 0;
+  while (s < info.n) {
+    let e = s, sum = tok[s];
+    while (e + 1 < info.n && (e + 1 - s + 1) <= lim.pages && sum + tok[e + 1] <= lim.tokens) { e++; sum += tok[e]; }
+    if (useChapters && e + 1 < info.n) {
+      // Pull the cut back to the last chapter start in the back half of this part.
+      let best = -1;
+      for (let c = e; c > s + (e - s) / 2; c--) if (starts.has(c)) { best = c; break; }
+      if (best > s) e = best - 1;
+    }
+    ranges.push([s, e]);
+    s = e + 1;
+  }
+  return { ranges, tok };
+}
+
+async function splitOne(q, lim, opts, fileIdx, fileCount) {
+  const label = fileCount > 1 ? `File ${fileIdx + 1}/${fileCount}: ` : '';
+  const data = new Uint8Array(await q.file.arrayBuffer());
+  const base = q.file.name.replace(/\.pdf$/i, '');
+  const res = { name: q.file.name, base, warnings: [], parts: [] };
+
+  let src;
+  try {
+    src = await PDFDocument.load(data, { updateMetadata: false });
+  } catch (err) {
+    res.error = /encrypt/i.test(err.message)
+      ? 'This PDF is password-protected or encrypted. Remove the protection first (e.g. print it to a new PDF).'
+      : /header|parse/i.test(err.message)
+        ? 'This file isn\'t a valid PDF, or it is damaged.'
+        : 'Could not read this PDF: ' + err.message;
+    return res;
+  }
+
+  progress(label + 'Reading text…', 0);
+  let info;
+  try {
+    info = await analyse(data.slice(), (i, n) => progress(`${label}Reading text… page ${i} of ${n}`, i / n * 0.4));
+  } catch (err) {
+    // Text analysis is optional; fall back to page counts only.
+    const n = src.getPageCount();
+    info = { n, chars: new Array(n).fill(0), marks: [], noText: true };
+    res.warnings.push({ text: 'Couldn\'t read the text, so the token limit and chapter breaks were skipped.' });
+  }
+  res.pages = info.n;
+  res.bytes = q.file.size;
+  const totalChars = info.chars.reduce((a, b) => a + b, 0);
+  res.tokens = Math.ceil(totalChars / CHARS_PER_TOKEN);
+  res.marks = info.marks;
+
+  const blank = info.noText ? 0 : info.chars.filter(c => c < 20).length;
+  if (blank && blank / info.n > 0.5) {
+    const msg = lim.pages > 100
+      ? `Most pages (${blank} of ${info.n}) have no text; it looks scanned. Claude only sees scans in parts of 100 pages or fewer. Use Full read.`
+      : `Most pages (${blank} of ${info.n}) have no text; it looks scanned. Claude reads these as images, and the token counts shown are too low.`;
+    res.warnings.push({ text: msg, bad: lim.pages > 100 });
+  }
+
+  const { ranges, tok } = planRanges(info, lim, opts.chapters && !info.noText);
+  const sumTok = (a, b) => { let t = 0; for (let i = a; i <= b; i++) t += tok[i]; return t; };
+
+  // Build parts; if one comes out too big, shrink it with a binary search and re-plan the rest.
+  // Trial builds lack the final title/subject, so keep a little headroom for them.
+  const cap = lim.bytes - Math.min(8192, lim.bytes * 0.05);
+  const chapterStarts = new Set(opts.chapters && !info.noText ? info.marks.map(m => m.page) : []);
+  const built = [];
+  let queueR = ranges.slice();
+  while (queueR.length) {
+    const [s, eMax] = queueR.shift();
+    const title = `${base} (pp. ${s + 1}-${eMax + 1})`;
+    progress(`${label}Building part ${built.length + 1}…`, 0.4 + 0.6 * (s / info.n));
+    await tick();
+    let e = eMax;
+    let bytes = await buildPart(src, s, e, { stamp: opts.stamp, title, subject: '' });
+    if (bytes.length > cap && e > s) {
+      let lo = s, hi = e - 1, best = null;
+      while (lo <= hi) {
+        const mid = (lo + hi) >> 1;
+        progress(`${label}Part ${built.length + 1} is over the size limit; trying pp. ${s + 1}-${mid + 1}…`);
+        await tick();
+        const b = await buildPart(src, s, mid, { stamp: opts.stamp, title, subject: '' });
+        if (b.length <= cap) { best = { e: mid, bytes: b }; lo = mid + 1; } else hi = mid - 1;
+      }
+      if (best) {
+        e = best.e; bytes = best.bytes;
+        // Same chapter preference as planRanges: end just before a chapter in the back half.
+        for (let c = e; c > s + (e - s) / 2; c--) if (chapterStarts.has(c)) { e = c - 1; break; }
+      }
+      else { e = s; bytes = await buildPart(src, s, s, { stamp: opts.stamp, title, subject: '' }); }
+      // Re-plan everything after this part with the same limits.
+      if (e < eMax) queueR = replanFrom(e + 1, info, lim, opts.chapters && !info.noText);
+    }
+    built.push({ s, e, bytes });
+  }
+
+  const total = built.length, pad = String(total).length < 2 ? 2 : String(total).length;
+  for (let k = 0; k < total; k++) {
+    const { s, e } = built[k];
+    const num = String(k + 1).padStart(pad, '0');
+    const partName = `${base} - part ${num} of ${String(total).padStart(pad, '0')} (pp. ${s + 1}-${e + 1}).pdf`;
+    const chapters = info.marks.filter(m => m.level === 1 && m.page >= s && m.page <= e).map(m => m.title).filter(Boolean);
+    // The chapter this part opens in, when it doesn't start on a chapter boundary.
+    const startsChapter = info.marks.some(m => m.level === 1 && m.page === s);
+    const openIn = startsChapter ? null : info.marks.filter(m => m.level === 1 && m.page < s).pop();
+    // Rebuild with the final title so the part says which of N it is.
+    const title = `${base} — part ${k + 1} of ${total}, pages ${s + 1}-${e + 1}`;
+    const subject = [openIn ? 'Continues: ' + openIn.title : '', chapters.length ? 'Contains: ' + chapters.join('; ') : '']
+      .filter(Boolean).join('. ');
+    progress(`${label}Finishing part ${k + 1} of ${total}…`, 0.9 + 0.1 * (k / total));
+    await tick();
+    const bytes = await buildPart(src, s, e, { stamp: opts.stamp, title, subject });
+    const p = {
+      name: partName, from: s + 1, to: e + 1, bytes, tokens: sumTok(s, e),
+      chapters, continues: openIn ? openIn.title : '',
+      tooBig: bytes.length > lim.bytes, tooManyTok: sumTok(s, e) > lim.tokens
+    };
+    res.parts.push(p);
+  }
+  if (res.parts.some(p => p.tooBig)) res.warnings.push({ text: 'A single page is bigger than the MB limit, so its part is still too big. Compress the PDF first.', bad: true });
+  if (res.parts.some(p => p.tooManyTok)) res.warnings.push({ text: 'A single page has more text than the token limit; its part goes over.' });
+  return res;
+}
+
+function replanFrom(start, info, lim, useChapters) {
+  const sub = {
+    n: info.n - start,
+    chars: info.chars.slice(start),
+    marks: info.marks.filter(m => m.page >= start).map(m => ({ ...m, page: m.page - start }))
+  };
+  return planRanges(sub, lim, useChapters).ranges.map(([a, b]) => [a + start, b + start]);
+}
+
+/* ---------- index file ---------- */
+function indexMarkdown(res, opts) {
+  const L = [];
+  L.push(`# ${res.base} — index of parts`, '');
+  L.push(`Source: \`${res.name}\` — ${res.pages} pages, ${fmtMB(res.bytes)}, ${fmtTok(res.tokens)}.`);
+  L.push(`Split into ${res.parts.length} parts. Page numbers below are pages of the original PDF.`);
+  if (opts.stamp) L.push('Each page carries a small stamp ("p. N") in its corner giving its page number in the original; cite those numbers.');
+  L.push('', '| Part | File | Original pages | Starts in / contains |', '|---|---|---|---|');
+  res.parts.forEach((p, i) => {
+    const what = [p.continues ? `continues *${p.continues}*` : '', p.chapters.join('; ')].filter(Boolean).join(' → ');
+    L.push(`| ${i + 1} | ${p.name.replace(/\|/g, '/')} | ${p.from}–${p.to} | ${what.replace(/\|/g, '/') || '—'} |`);
+  });
+  if (res.marks.length) {
+    L.push('', '## Chapters', '');
+    for (const m of res.marks) {
+      const part = res.parts.findIndex(p => m.page + 1 >= p.from && m.page + 1 <= p.to) + 1;
+      L.push(`${m.level === 2 ? '  ' : ''}- ${m.title || '(untitled)'} — p. ${m.page + 1} (part ${part})`);
+    }
+  }
+  L.push('');
+  return L.join('\n');
+}
+
+/* ---------- run ---------- */
+const DL_ICON = '<svg viewBox="0 0 24 24"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>';
+async function runSplit() {
+  busy = true; $('#drop').classList.add('busy');
+  $('#results').innerHTML = ''; $('#actions').hidden = true;
+  outputs = [];
+  const lim = LIMITS, opts = OPTS;
+  const items = queue.slice();
+  for (let i = 0; i < items.length; i++) {
+    let res;
+    try { res = await splitOne(items[i], lim, opts, i, items.length); }
+    catch (err) { res = { name: items[i].file.name, error: 'Something went wrong: ' + err.message, parts: [], warnings: [] }; }
+    renderResult(res, opts);
+  }
+  const nParts = outputs.filter(o => o.mime === 'application/pdf').length;
+  progress(nParts ? `Done. ${nParts} part${nParts === 1 ? '' : 's'} ready.` : 'Nothing to save.', 1);
+  $('#actions').hidden = !outputs.length;
+  $('#shareAll').hidden = !canShareFiles();
+  busy = false; $('#drop').classList.remove('busy');
+}
+
+function renderResult(res, opts) {
+  const card = document.createElement('section');
+  card.className = 'result';
+  if (res.error) {
+    card.innerHTML = `<header><b>${esc(res.name)}</b></header><p class="warn bad">${esc(res.error)}</p>`;
+    $('#results').append(card); return;
+  }
+  const rows = res.parts.map(p => {
+    const oi = outputs.push({ name: p.name, bytes: p.bytes, mime: 'application/pdf' }) - 1;
+    const note = p.chapters.length ? p.chapters.join(' · ') : (p.continues ? 'cont. ' + p.continues : '');
+    return `<div class="part"><span class="tx"><b>pp. ${p.from}–${p.to}</b>
+      <small><span class="${p.tooBig ? 'over' : ''}">${fmtMB(p.bytes.length)}</span> · ${p.to - p.from + 1} page${p.to === p.from ? '' : 's'} ·<span class="${p.tooManyTok ? 'over' : ''}">${fmtTok(p.tokens)}</span></small>
+      ${note ? `<em>${esc(note)}</em>` : ''}</span>
+      <button class="dl" data-o="${oi}" aria-label="Save ${esc(p.name)}">${DL_ICON}</button></div>`;
+  }).join('');
+  let idxRow = '';
+  if (opts.index && res.parts.length) {
+    const md = indexMarkdown(res, opts);
+    const name = `${res.base} - index.md`;
+    const oi = outputs.push({ name, bytes: new TextEncoder().encode(md), mime: 'text/markdown' }) - 1;
+    idxRow = `<div class="part"><span class="tx"><b>Index</b><small>${esc(name)}</small></span>
+      <button class="dl" data-o="${oi}" aria-label="Save index">${DL_ICON}</button></div>`;
+  }
+  card.innerHTML = `<header><b>${esc(res.name)}</b>
+    <small>${res.pages} pages · ${fmtMB(res.bytes)} · ${fmtTok(res.tokens)} → ${res.parts.length} part${res.parts.length === 1 ? '' : 's'}</small></header>
+    ${res.warnings.map(w => `<p class="warn${w.bad ? ' bad' : ''}">${esc(w.text)}</p>`).join('')}
+    ${rows}${idxRow}`;
+  $('#results').append(card);
+}
+
+/* ---------- saving ---------- */
+function saveBlob(blob, name) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = name; document.body.append(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 60000);
+}
+function canShareFiles() {
+  try { return !!(navigator.canShare && navigator.canShare({ files: [new File(['x'], 'x.pdf', { type: 'application/pdf' })] })); }
+  catch (e) { return false; }
+}
+$('#results').addEventListener('click', async e => {
+  const b = e.target.closest('.dl'); if (!b) return;
+  const o = outputs[+b.dataset.o];
+  const file = new File([o.bytes], o.name, { type: o.mime });
+  // On iPhone the share sheet ("Save to Files") is friendlier than a download.
+  if (canShareFiles() && navigator.canShare({ files: [file] })) {
+    try { await navigator.share({ files: [file] }); return; } catch (err) { if (err.name === 'AbortError') return; }
+  }
+  saveBlob(file, o.name);
+});
+$('#zipAll').addEventListener('click', async () => {
+  const btn = $('#zipAll'); btn.disabled = true; btn.textContent = 'Zipping…';
+  try {
+    const zip = new JSZip();
+    // PDFs are already compressed; STORE is much faster and barely bigger.
+    for (const o of outputs) zip.file(o.name, o.bytes, { compression: 'STORE' });
+    const blob = await zip.generateAsync({ type: 'blob' });
+    const bases = [...new Set(queue.map(q => q.file.name.replace(/\.pdf$/i, '')))];
+    saveBlob(blob, (bases.length === 1 ? bases[0] + ' - parts' : 'PDF parts') + '.zip');
+  } finally { btn.disabled = false; btn.textContent = 'Save all as .zip'; }
+});
+$('#shareAll').addEventListener('click', async () => {
+  const files = outputs.map(o => new File([o.bytes], o.name, { type: o.mime }));
+  try { await navigator.share({ files }); }
+  catch (err) { if (err.name !== 'AbortError') alert('Sharing failed: ' + err.message + '\nUse “Save all as .zip” instead.'); }
+});
+
+if ('serviceWorker' in navigator && location.protocol === 'https:') {
+  window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+}
+</script>
+</body>
+</html>

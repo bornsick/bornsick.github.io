@@ -5,6 +5,7 @@
 !/.nojekyll
 !/index.html
 !/cutting-block/
+!/pdf-splitter/
 
 # never publish
 /cutting-block/.backup/
